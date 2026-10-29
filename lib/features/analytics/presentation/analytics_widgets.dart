@@ -7,6 +7,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../domain/money/currency.dart';
 import '../../../shared/layout/page_layout.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 
 /// Width at which analytics pages switch to two columns.
 const wideBreakpoint = 900.0;
@@ -438,7 +439,8 @@ class ChangeBadge extends StatelessWidget {
   }
 }
 
-/// Rounded square icon badge (tinted background, coloured glyph).
+/// Organic icon badge (tinted background, coloured glyph); the silhouette is
+/// seeded by the glyph so each icon keeps a stable shape.
 class IconBadge extends StatelessWidget {
   const IconBadge(this.icon, {super.key, required this.color, this.background, this.size = AppIconSize.badge});
   final IconData icon;
@@ -447,13 +449,10 @@ class IconBadge extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: background ?? color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(size * 0.34),
-        ),
+  Widget build(BuildContext context) => BlobBadge(
+        color: background ?? color.withValues(alpha: 0.14),
+        size: size,
+        seed: icon.codePoint,
         child: Icon(icon, size: size * 0.5, color: color),
       );
 }

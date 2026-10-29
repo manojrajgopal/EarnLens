@@ -28,7 +28,7 @@ Fraction liveEarned(WidgetRef ref, CounterRange range, Set<String>? sources) {
       );
 }
 
-/// Hero earnings card.
+/// Hero earnings card: a large flowing purple blob with glass bars.
 class LiveCounterCard extends ConsumerWidget {
   const LiveCounterCard({super.key, required this.config});
   final DashboardCardConfig config;
@@ -42,100 +42,121 @@ class LiveCounterCard extends ConsumerWidget {
     final hasSources = ref.watch(sourcesProvider).isNotEmpty;
     final decimals = dash.precision.clamp(2, 6);
     const fg = AppColors.white;
+    final reduce = MediaQuery.disableAnimationsOf(context);
+
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(26, 30, 20, 28),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          'Money earned so far ${dash.counterRange.label.toLowerCase()}',
+          style: AppType.label.copyWith(color: fg.withValues(alpha: 0.92), fontSize: 14.5),
+        ),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: Consumer(builder: (context, ref, _) {
+              final value = liveEarned(ref, dash.counterRange, config.sourceIds);
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: AmountText(
+                  money.fraction(value, decimals: decimals),
+                  style: AppType.amountHero.copyWith(
+                    color: fg,
+                    fontSize: 42,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    shadows: [Shadow(color: AppColors.violetNight.withValues(alpha: 0.35), blurRadius: 18)],
+                  ),
+                  semanticsLabel: 'Earned so far ${money.fraction(value)}',
+                ),
+              );
+            }),
+          ),
+          if (hasSources) ...[const SizedBox(width: 10), const _LiveChip()],
+        ]),
+        const SizedBox(height: 16),
+        if (hasSources)
+          _RateAndCaption(
+            pill: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: ShapeDecoration(
+                shape: const StadiumBorder(),
+                gradient: const LinearGradient(colors: [Color(0xFF1E0F4D), Color(0xFF2E1772)]),
+                shadows: [
+                  BoxShadow(color: AppColors.violetNight.withValues(alpha: 0.45), blurRadius: 14, offset: const Offset(0, 6)),
+                ],
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.bolt_rounded, size: 18, color: Color(0xFFFFC94D)),
+                const SizedBox(width: 6),
+                AmountText(
+                  '${money.fraction(rates[primary]!, decimals: primary.isSubDay ? dash.precision : 2)} ${primary.shortLabel}',
+                  style: AppType.label.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: 14.5),
+                ),
+              ]),
+            ),
+            caption: Text(
+              'Estimate from your pay rules — not money received',
+              maxLines: 3,
+              style: AppType.caption.copyWith(color: fg.withValues(alpha: 0.85), fontSize: 12.5, height: 1.35),
+            ),
+          )
+        else
+          Row(children: [
+            Expanded(
+              child: Text('Add an income source to start counting.', style: AppType.body.copyWith(color: fg)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.white, foregroundColor: AppColors.violet),
+              onPressed: () => context.go('/income'),
+              child: const Text('Add income'),
+            ),
+          ]),
+      ]),
+    );
 
     return Semantics(
       container: true,
       label: 'Money earned so far ${dash.counterRange.label.toLowerCase()}',
-      child: DecoratedBox(
-        decoration: const ShapeDecoration(
-          shape: OrganicBorder(seed: 3, wobble: 0.9, radius: 40),
-          shadows: AppShadows.glow,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: reduce ? 1 : 0, end: 1),
+        duration: const Duration(milliseconds: 1100),
+        curve: AppCurves.emphasized,
+        builder: (context, t, child) => BlobSurface(
+          spec: BlobShapes.hero,
           gradient: AppGradients.hero,
+          shadows: const [
+            BoxShadow(color: Color(0x556B3BEA), blurRadius: 36, offset: Offset(0, 18)),
+            BoxShadow(color: Color(0x33CB7EEF), blurRadius: 12, offset: Offset(0, 4)),
+          ],
+          rim: Colors.white.withValues(alpha: 0.45),
+          backdrop: _HeroPainter(t),
+          child: child!,
         ),
-        child: ClipPath(
-          clipper: const ShapeBorderClipper(shape: OrganicBorder(seed: 3, wobble: 0.9, radius: 40)),
-          child: Stack(children: [
-            // Decorative layer kept to the right/bottom so the amount stays legible.
-            const Positioned.fill(child: _HeroDecoration()),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(26, 24, 22, 24),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(
-                    child: Text(
-                      'Money earned so far ${dash.counterRange.label.toLowerCase()}',
-                      style: AppType.label.copyWith(color: fg.withValues(alpha: 0.9)),
-                    ),
-                  ),
-                  if (hasSources) const _LiveChip(),
-                ]),
-                const SizedBox(height: 14),
-                Consumer(builder: (context, ref, _) {
-                  final value = liveEarned(ref, dash.counterRange, config.sourceIds);
-                  return FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: AmountText(
-                      money.fraction(value, decimals: decimals),
-                      style: AppType.amountHero.copyWith(
-                        color: fg,
-                        fontSize: 46,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                      semanticsLabel: 'Earned so far ${money.fraction(value)}',
-                    ),
-                  );
-                }),
-                const SizedBox(height: 18),
-                if (hasSources)
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 10,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                        decoration: BoxDecoration(
-                          color: AppColors.violetNight.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.bolt_rounded, size: 18, color: Color(0xFFFFC94D)),
-                          const SizedBox(width: 6),
-                          AmountText(
-                            '${money.fraction(rates[primary]!, decimals: primary.isSubDay ? dash.precision : 2)} ${primary.shortLabel}',
-                            style: AppType.label.copyWith(color: fg, fontWeight: FontWeight.w700),
-                          ),
-                        ]),
-                      ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 220),
-                        child: Text(
-                          'Estimate from your pay rules — not money received',
-                          style: AppType.caption.copyWith(color: fg.withValues(alpha: 0.8)),
-                        ),
-                      ),
-                    ],
-                  )
-                else
-                  Row(children: [
-                    Expanded(
-                      child: Text('Add an income source to start counting.',
-                          style: AppType.body.copyWith(color: fg)),
-                    ),
-                    FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: AppColors.white, foregroundColor: AppColors.violet),
-                      onPressed: () => context.go('/income'),
-                      child: const Text('Add income'),
-                    ),
-                  ]),
-              ]),
-            ),
-          ]),
-        ),
+        child: content,
       ),
     );
   }
+}
+
+/// Rate pill with the "estimate" caption beside it on wide cards and below
+/// it on phones — always clear of the glass bars on the right.
+class _RateAndCaption extends StatelessWidget {
+  const _RateAndCaption({required this.pill, required this.caption});
+  final Widget pill;
+  final Widget caption;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        if (box.maxWidth >= 460) {
+          return Row(children: [pill, const SizedBox(width: 14), Flexible(child: caption), const SizedBox(width: 112)]);
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          pill,
+          const SizedBox(height: 10),
+          Padding(padding: const EdgeInsets.only(right: 120), child: caption),
+        ]);
+      });
 }
 
 class _LiveChip extends StatefulWidget {
@@ -169,115 +190,138 @@ class _LiveChipState extends State<_LiveChip> with SingleTickerProviderStateMixi
   Widget build(BuildContext context) => Semantics(
         label: 'Live',
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(AppRadius.pill),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: ShapeDecoration(
+            shape: const StadiumBorder(side: BorderSide(color: Colors.white, width: 1.2)),
+            color: AppColors.white.withValues(alpha: 0.9),
+            shadows: [BoxShadow(color: AppColors.violetNight.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             FadeTransition(
               opacity: Tween(begin: 0.35, end: 1.0).animate(_c),
               child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                width: 9,
+                height: 9,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF22C55E),
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: Color(0x8822C55E), blurRadius: 6)],
+                ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 7),
             Text('LIVE',
-                style: AppType.caption.copyWith(color: AppColors.violetDeep, letterSpacing: 1.1, fontWeight: FontWeight.w700)),
+                style: AppType.caption.copyWith(
+                    color: AppColors.violetNight, fontSize: 12.5, letterSpacing: 0.8, fontWeight: FontWeight.w700)),
           ]),
         ),
       );
 }
 
-/// Rising glass bars and a growth arrow on the right of the hero card.
-/// Animates once on entrance (skipped with reduced motion).
-class _HeroDecoration extends StatelessWidget {
-  const _HeroDecoration();
-
-  @override
-  Widget build(BuildContext context) {
-    final reduce = MediaQuery.disableAnimationsOf(context);
-    return IgnorePointer(
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: reduce ? 1 : 0, end: 1),
-        duration: const Duration(milliseconds: 1100),
-        curve: AppCurves.emphasized,
-        builder: (context, t, _) => CustomPaint(painter: _HeroPainter(t)),
-      ),
-    );
-  }
-}
-
+/// Silky light ribbons, rising glass cylinders and a growth arrow on the
+/// right of the hero card. [t] animates the bars once on entrance.
 class _HeroPainter extends CustomPainter {
   _HeroPainter(this.t);
   final double t;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Soft highlight blob top-right.
-    canvas.drawCircle(
-      Offset(size.width * 0.92, size.height * 0.05),
-      size.height * 0.75,
-      Paint()
-        ..shader = RadialGradient(colors: [Colors.white.withValues(alpha: 0.22), Colors.white.withValues(alpha: 0)])
-            .createShader(Rect.fromCircle(center: Offset(size.width * 0.92, size.height * 0.05), radius: size.height * 0.75)),
-    );
-    // Wave across the bottom.
-    final wave = Path()
-      ..moveTo(0, size.height * 0.86)
-      ..cubicTo(size.width * 0.3, size.height * 0.72, size.width * 0.55, size.height * 1.0, size.width, size.height * 0.7)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(wave, Paint()..color = Colors.white.withValues(alpha: 0.07));
+    final w = size.width, h = size.height;
+    void glow(Offset c, double r, Color color) => canvas.drawCircle(
+          c,
+          r,
+          Paint()
+            ..shader =
+                RadialGradient(colors: [color, color.withValues(alpha: 0)]).createShader(Rect.fromCircle(center: c, radius: r)),
+        );
+    // Luminous swirl upper right, deep pool lower left.
+    glow(Offset(w * 0.86, h * 0.1), h * 0.9, const Color(0x55F5B8FF));
+    glow(Offset(w * 0.05, h * 0.95), h * 0.8, const Color(0x403A13A8));
 
-    // Glass bars (bottom-right), heights grow with t.
-    final barW = math.min(26.0, size.width * 0.055);
-    const heights = [0.22, 0.32, 0.44, 0.58];
-    final baseY = size.height * 0.94;
+    // Flowing ribbons (the reference's silky folds).
+    for (var i = 0; i < 3; i++) {
+      final ribbon = Path()
+        ..moveTo(-10, h * (0.95 - i * 0.1))
+        ..cubicTo(w * 0.28, h * (0.62 - i * 0.05), w * 0.52, h * (1.08 - i * 0.04), w * 0.78, h * (0.6 - i * 0.06))
+        ..quadraticBezierTo(w * 0.9, h * (0.42 - i * 0.05), w + 10, h * (0.36 - i * 0.04))
+        ..lineTo(w + 10, h + 10)
+        ..lineTo(-10, h + 10)
+        ..close();
+      canvas.drawPath(
+        ribbon,
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0),
+              Colors.white.withValues(alpha: 0.09 - i * 0.02),
+              Colors.white.withValues(alpha: 0),
+            ],
+          ).createShader(Offset.zero & size),
+      );
+    }
+
+    // Glass cylinders (bottom-right); heights grow with t.
+    final barW = math.min(24.0, w * 0.055);
+    const heights = [0.2, 0.32, 0.46, 0.62];
+    final baseY = h * 0.9;
+    final startX = w - 20 - heights.length * (barW + 7);
     for (var i = 0; i < heights.length; i++) {
       final local = ((t * 1.3) - i * 0.1).clamp(0.0, 1.0);
-      final h = size.height * heights[i] * Curves.easeOutBack.transform(local);
-      final x = size.width * 0.70 + i * (barW + 8);
-      if (x + barW > size.width - 8) break;
-      final rect = RRect.fromRectAndCorners(
-        Rect.fromLTWH(x, baseY - h, barW, h),
-        topLeft: const Radius.circular(8),
-        topRight: const Radius.circular(8),
-      );
+      final bh = h * heights[i] * Curves.easeOutBack.transform(local);
+      if (bh <= 10) continue;
+      final x = startX + i * (barW + 7);
+      final r = Radius.elliptical(barW / 2, 5);
+      final body = RRect.fromRectAndCorners(Rect.fromLTWH(x, baseY - bh, barW, bh),
+          topLeft: r, topRight: r, bottomLeft: r, bottomRight: r);
       canvas.drawRRect(
-        rect,
+        body,
         Paint()
           ..shader = LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white.withValues(alpha: 0.55), Colors.white.withValues(alpha: 0.08)],
-          ).createShader(rect.outerRect),
+            colors: [Colors.white.withValues(alpha: 0.62), Colors.white.withValues(alpha: 0.12)],
+          ).createShader(body.outerRect),
       );
+      canvas.drawRect(Rect.fromLTWH(x + barW * 0.18, baseY - bh + 6, barW * 0.16, bh - 10),
+          Paint()..color = Colors.white.withValues(alpha: 0.35));
+      canvas.drawOval(Rect.fromLTWH(x, baseY - bh, barW, 9), Paint()..color = Colors.white.withValues(alpha: 0.85));
     }
-    // Arrow trending up.
+    canvas.drawOval(
+      Rect.fromLTWH(startX - 8, baseY - 4, heights.length * (barW + 7) + 10, 12),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.2)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+
+    // Arrow trending up over the bars.
     if (t > 0.5) {
       final a = ((t - 0.5) * 2).clamp(0.0, 1.0);
       final paint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.7 * a)
+        ..color = Colors.white.withValues(alpha: 0.95 * a)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeCap = StrokeCap.round;
-      // Kept to the lower-right, clear of the amount and the LIVE chip.
-      final start = Offset(size.width * 0.66, size.height * 0.74);
-      final end = Offset(size.width * 0.94, size.height * 0.42);
-      final mid = Offset.lerp(start, end, a)!;
-      canvas.drawLine(start, mid, paint);
-      if (a == 1) {
-        canvas.drawPath(
-          Path()
-            ..moveTo(end.dx - 14, end.dy + 1)
-            ..lineTo(end.dx, end.dy)
-            ..lineTo(end.dx - 2, end.dy + 14),
-          paint,
-        );
+        ..strokeWidth = 3.2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      final start = Offset(startX - 6, baseY - h * 0.18);
+      final end = Offset(w - 24, h * 0.16);
+      final curve = Path()
+        ..moveTo(start.dx, start.dy)
+        ..quadraticBezierTo(start.dx + (end.dx - start.dx) * 0.55, start.dy - h * 0.08, end.dx, end.dy);
+      for (final m in curve.computeMetrics()) {
+        final part = m.extractPath(0, m.length * a);
+        canvas.drawPath(part, Paint.from(paint)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+        canvas.drawPath(part, paint);
+        if (a == 1) {
+          final dir = m.getTangentForOffset(m.length)!.vector;
+          final normal = Offset(-dir.dy, dir.dx);
+          canvas.drawPath(
+            Path()
+              ..moveTo(end.dx - dir.dx * 12 + normal.dx * 7, end.dy - dir.dy * 12 + normal.dy * 7)
+              ..lineTo(end.dx, end.dy)
+              ..lineTo(end.dx - dir.dx * 12 - normal.dx * 7, end.dy - dir.dy * 12 - normal.dy * 7),
+            paint,
+          );
+        }
       }
     }
   }
@@ -297,6 +341,7 @@ class TodayCard extends ConsumerWidget {
     final dash = ref.watch(dashboardConfigProvider);
     final value = liveEarned(ref, CounterRange.today, config.sourceIds);
     return EarnCard(
+      seed: 41,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text("Today's earnings", style: AppType.label.copyWith(color: context.colors.inkMuted)),
         const SizedBox(height: 8),

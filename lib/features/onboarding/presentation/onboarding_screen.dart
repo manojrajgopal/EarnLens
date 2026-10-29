@@ -18,6 +18,7 @@ import '../../../domain/money/currency.dart';
 import '../../../shared/layout/page_layout.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../authentication/application/session_controller.dart';
 import '../../authentication/presentation/pin_pad.dart';
 import '../../notifications/domain/notification_models.dart';
@@ -610,9 +611,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+            decoration: ShapeDecoration(
               color: dark ? AppColors.sky.withValues(alpha: 0.14) : AppColors.skySoft,
-              borderRadius: BorderRadius.circular(AppRadius.md + 2),
+              shape: BlobBorder(BlobShapes.cloud(23, radius: 24, wobble: 0.45)),
             ),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const SettingsIcon(Icons.widgets_outlined, tone: SettingsTone.sky),

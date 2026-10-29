@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../shared/layout/page_layout.dart';
+import '../../shared/widgets/organic.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 
@@ -99,21 +100,27 @@ class AppShell extends StatelessWidget {
   }
 }
 
-/// Floating capsule navigation bar with a raised centre orb.
+//// Floating organic navigation capsule: white, with a glowing rim and a
+/// raised centre swell that cradles the purple Insights orb.
 class FloatingNavBar extends StatelessWidget {
   const FloatingNavBar({super.key, required this.current, required this.onSelect});
   final int current;
   final ValueChanged<int> onSelect;
 
   static const barHeight = 70.0;
-  static const orbSize = 62.0;
+  static const orbSize = 64.0;
+
+  /// Height of the centre swell above the capsule (matches [BlobShapes.nav]).
+  static const swell = 22.0;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < AppBreakpoints.compact;
     final side = compact ? 10.0 : 16.0;
+    const shape = BlobBorder(BlobShapes.nav);
     return SafeArea(
       // Keeps the bar above the gesture handle / 3-button bar and clear of
       // landscape cutouts, with a small floating gap.
@@ -124,35 +131,38 @@ class FloatingNavBar extends StatelessWidget {
           // Never stretch the capsule across large screens.
           constraints: const BoxConstraints(maxWidth: 520),
           child: SizedBox(
-            height: barHeight + orbSize * 0.32,
+            height: barHeight + swell,
             child: Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.bottomCenter,
               children: [
-                Container(
-                  height: barHeight,
-                  decoration: BoxDecoration(
-                    color: c.navBar,
-                    borderRadius: BorderRadius.circular(AppRadius.xl),
-                    boxShadow: AppShadows.nav,
-                    border: Border.all(color: c.accent.withValues(alpha: 0.12)),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: ShapeDecoration(
+                      shape: shape,
+                      color: c.navBar,
+                      shadows: [
+                        ...AppShadows.nav,
+                        BoxShadow(color: c.accent.withValues(alpha: dark ? 0.12 : 0.28), blurRadius: 18, spreadRadius: -2),
+                      ],
+                    ),
+                    child: CustomPaint(painter: _NavRimPainter(c.accent, dark)),
                   ),
+                ),
+                SizedBox(
+                  height: barHeight,
                   child: Row(
                     children: [
                       for (final d in _barItems.take(2))
-                        Expanded(
-                          child: _NavItem(d, active: current == d.branch, compact: compact, onTap: onSelect),
-                        ),
-                      const SizedBox(width: orbSize + 12),
+                        Expanded(child: _NavItem(d, active: current == d.branch, compact: compact, onTap: onSelect)),
+                      const SizedBox(width: orbSize + 16),
                       for (final d in _barItems.skip(2))
-                        Expanded(
-                          child: _NavItem(d, active: current == d.branch, compact: compact, onTap: onSelect),
-                        ),
+                        Expanded(child: _NavItem(d, active: current == d.branch, compact: compact, onTap: onSelect)),
                     ],
                   ),
                 ),
                 Positioned(
-                  bottom: barHeight - orbSize * 0.68,
+                  top: 2,
                   child: _Orb(active: current == _insights.branch, onTap: () => onSelect(_insights.branch)),
                 ),
               ],
@@ -162,6 +172,51 @@ class FloatingNavBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Soft lavender glow along the capsule edge, brightest at the swell.
+class _NavRimPainter extends CustomPainter {
+  _NavRimPainter(this.accent, this.dark);
+  final Color accent;
+  final bool dark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final path = BlobPath.of(BlobShapes.nav, rect.deflate(0.8));
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..shader = LinearGradient(colors: [
+          accent.withValues(alpha: 0.5),
+          accent.withValues(alpha: 0.12),
+          accent.withValues(alpha: 0.7),
+          accent.withValues(alpha: 0.12),
+          accent.withValues(alpha: 0.5),
+        ], stops: const [0, 0.3, 0.5, 0.7, 1])
+            .createShader(rect),
+    );
+    if (!dark) {
+      canvas.save();
+      canvas.clipPath(path);
+      final top = Rect.fromLTWH(0, 0, size.width, size.height * 0.5);
+      canvas.drawRect(
+        top,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [accent.withValues(alpha: 0.08), accent.withValues(alpha: 0)],
+          ).createShader(top),
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_NavRimPainter old) => old.accent != accent || old.dark != dark;
 }
 
 class _NavItem extends StatelessWidget {
@@ -176,7 +231,7 @@ class _NavItem extends StatelessWidget {
     final c = context.colors;
     final reduce = MediaQuery.disableAnimationsOf(context);
     final duration = reduce ? Duration.zero : AppDurations.medium;
-    final color = active ? c.accentText : c.navBarInk.withValues(alpha: 0.62);
+    final color = active ? c.accentText : c.navBarInk.withValues(alpha: 0.78);
     return Semantics(
       selected: active,
       button: true,
@@ -191,11 +246,12 @@ class _NavItem extends StatelessWidget {
             AnimatedContainer(
               duration: duration,
               curve: AppCurves.emphasized,
-              width: active ? 54 : 40,
+              width: active ? 56 : 40,
               height: 32,
-              decoration: BoxDecoration(
-                color: active ? c.accentSoft : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
+              decoration: ShapeDecoration(
+                shape: const StadiumBorder(),
+                gradient: active ? LinearGradient(colors: [c.accentSoft, Color.lerp(c.accentSoft, c.accent, 0.35)!]) : null,
+                shadows: active ? [BoxShadow(color: c.accent.withValues(alpha: 0.35), blurRadius: 12)] : null,
               ),
               child: AnimatedScale(
                 duration: duration,
@@ -246,8 +302,16 @@ class _Orb extends StatelessWidget {
             height: FloatingNavBar.orbSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: AppGradients.orb,
-              boxShadow: AppShadows.glow,
+              gradient: const RadialGradient(
+                center: Alignment(-0.35, -0.45),
+                radius: 1.0,
+                colors: [Color(0xFFB57CF6), Color(0xFF7B45EE), Color(0xFF4E22C9)],
+                stops: [0, 0.55, 1],
+              ),
+              boxShadow: [
+                const BoxShadow(color: Color(0x666B3BEA), blurRadius: 22, offset: Offset(0, 10)),
+                BoxShadow(color: c.accent.withValues(alpha: active ? 0.7 : 0.4), blurRadius: 16, spreadRadius: 1),
+              ],
               border: Border.all(color: c.navBar, width: 4),
             ),
             child: Material(
@@ -259,7 +323,7 @@ class _Orb extends StatelessWidget {
                 child: Icon(
                   active ? _insights.activeIcon : Icons.bar_chart_rounded,
                   color: AppColors.white,
-                  size: AppIconSize.lg,
+                  size: 28,
                 ),
               ),
             ),
@@ -270,7 +334,7 @@ class _Orb extends StatelessWidget {
   }
 }
 
-/// The EarnLens brand mark — the supplied app icon artwork
+// The EarnLens brand mark — the supplied app icon artwork
 /// (`assets/images/earnlens_mark.png`, cropped from earnlens_app_icon.png).
 class EarnLensMark extends StatelessWidget {
   const EarnLensMark({super.key, this.size = 56});

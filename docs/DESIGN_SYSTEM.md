@@ -1,8 +1,9 @@
 # Design system & UX infrastructure
 
 Visual direction: premium lavender/purple finance app — lavender-tinted light background with
-soft glows, white rounded cards with lavender-tinted shadows, purple gradient hero surfaces,
-pastel organic tiles, large bold amounts, pill controls, a floating capsule navigation with a
+soft glows, white floating organic "cloud" cards with lavender-tinted shadows, flowing purple
+gradient hero blobs, glossy pastel bubbles, large bold amounts, pill controls, an illustrated
+sunrise header, and a floating organic navigation capsule with a
 raised centre orb. Dark theme mirrors it on deep purple-black surfaces.
 
 ## Tokens — `lib/core/theme/tokens.dart`
@@ -33,8 +34,26 @@ gradient / `tint` pastel; foreground inherited), `SectionHeader`, `LinkAction`, 
 (branded bars), `EntranceScale`, `RoundIconButton`, `GradientButton`, `BusyButton` (duplicate-tap
 safe), `InfoTip`, `confirmDialog`, `runGuarded`.
 
-`lib/shared/widgets/organic.dart`: `OrganicBorder` (soft uneven card silhouette, deterministic per
-seed), `OrganicTile`, `GradientProgress`, `AnimatedAmount` (display-only tween; final frame exact).
+`lib/shared/widgets/organic.dart` — the **organic shape engine**. No surface in the app is a plain
+(rounded) rectangle:
+
+* `BlobSpec` describes a silhouette: corner radii, a seeded closed-periodic wave around the outline,
+  and Gaussian `BlobBump`s (swells/dips) on chosen edges. `BlobPath` samples a rounded-rect
+  perimeter, displaces each sample along its normal, and joins them with a closed Catmull-Rom
+  spline; paths are deterministic, cached, and always stay inside their bounds.
+* `BlobBorder` (an `OutlinedBorder`) makes any spec usable for `ShapeDecoration`, `Material`,
+  clipping, ink (`customBorder`) and shadows. `BlobInputBorder` gives text fields the same contour.
+* `BlobShapes` holds the named silhouettes from the reference: `hero`, `night`, `source`,
+  `bubble(i)`, `pebble(i)`, `cloud(seed)`, `chip(seed)`, `nav` (centre swell for the orb), `sheet`,
+  `dialog`.
+* Widgets: `BlobSurface` (fill/gradient, tinted glow, glossy sheen, glowing rim, aura wisps,
+  in-shape backdrop painter, clipped ink), `OrganicTile` (glossy pastel bubble), `BlobBadge`
+  (organic icon/date badge), `GradientProgress`, `AnimatedAmount`. `OrganicBorder(seed:)` remains as
+  a seeded shorthand.
+
+Illustrations are `CustomPainter`s: `SunriseScene` (dashboard header — sky, ridges, outcrop, hiker,
+"Track · Earn · Grow"), the hero's glass bars and growth arrow, the night panel's summit and trophy,
+the income card's laptop vignette, leaves, and the empty-ledger vignette.
 
 ## Safe areas & edge-to-edge — `lib/shared/layout/page_layout.dart`
 
@@ -53,7 +72,7 @@ seed), `OrganicTile`, `GradientProgress`, `AnimatedAmount` (display-only tween; 
 
 ## Navigation — `lib/core/routing/app_shell.dart`
 
-Phones: floating white capsule (max 520 px wide, centred) with Home · Income · **Insights orb** ·
+Phones: floating white organic capsule (`BlobShapes.nav`, glowing lavender rim, max 520 px wide, centred) with Home · Income · **Insights orb** ·
 Calendar · Settings. The orb is the real Insights branch. Active items get a lavender pill, bolder
 violet label and a spring scale; haptic tick on change; 48 dp targets; Semantics labels. Widths ≥
 840 px use a navigation rail. Branch stacks are preserved (`StatefulShellRoute.indexedStack`);

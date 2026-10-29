@@ -12,6 +12,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../data/backup/csv_service.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../settings/presentation/settings_widgets.dart';
 
 enum _ExportKind { transactions, monthly }
@@ -260,13 +261,10 @@ class _ImportReportSheet extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: failed ? c.errorSoft : c.positiveSoft,
-                  borderRadius: BorderRadius.circular(14),
-                ),
+              BlobBadge(
+                size: 42,
+                seed: failed ? 3 : 4,
+                color: failed ? c.errorSoft : c.positiveSoft,
                 child: Icon(failed ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
                     color: failed ? c.error : c.positive),
               ),
@@ -297,7 +295,10 @@ class _ImportReportSheet extends StatelessWidget {
               const SizedBox(height: AppSpace.md),
               Container(
                 padding: const EdgeInsets.all(AppSpace.md),
-                decoration: BoxDecoration(color: c.errorSoft, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                decoration: ShapeDecoration(
+                  color: c.errorSoft,
+                  shape: BlobBorder(BlobShapes.cloud(5, radius: 18, wobble: 0.4)),
+                ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   for (final e in r.errors)
                     Padding(
@@ -330,7 +331,10 @@ class CsvFormatHelp extends StatelessWidget {
       Container(
         width: double.infinity,
         padding: const EdgeInsets.all(AppSpace.md),
-        decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.sm)),
+        decoration: ShapeDecoration(
+          color: c.cardHigh,
+          shape: BlobBorder(BlobShapes.cloud(6, radius: 18, wobble: 0.4)),
+        ),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Text(

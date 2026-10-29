@@ -189,6 +189,8 @@ abstract final class AppType {
         fontVariations: [FontVariation('wght', weight.toDouble())],
         height: height,
         letterSpacing: spacing,
+        // Urbanist has no ₹ glyph; the platform sans supplies it.
+        fontFamilyFallback: const ['Roboto', 'Segoe UI', 'sans-serif'],
       );
 
   /// Light display headings ("Your earnings, clearly.").
@@ -202,6 +204,9 @@ abstract final class AppType {
 
   static final title = _s(20, 600, height: 1.2);
   static final section = _s(17, 600, height: 1.25);
+
+  /// Card and section headings ("Earning rates", "Monthly trend").
+  static final sectionStrong = _s(18, 700, height: 1.25, spacing: -0.2);
   static final label = _s(14, 500, height: 1.3);
   static final body = _s(15, 400, height: 1.45);
   static final bodySmall = _s(13, 400, height: 1.4);

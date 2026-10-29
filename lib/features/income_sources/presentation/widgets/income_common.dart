@@ -114,8 +114,8 @@ class InfoBanner extends StatelessWidget {
       BannerTone.positive => (c.positiveSoft, c.positive),
     };
     return Container(
-      padding: const EdgeInsets.all(AppSpace.lg),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppRadius.md)),
+      padding: const EdgeInsets.fromLTRB(AppSpace.lg + 2, AppSpace.lg, AppSpace.lg + 2, AppSpace.lg),
+      decoration: ShapeDecoration(color: bg, shape: BlobBorder(BlobShapes.cloud(11 + tone.index, radius: 22, wobble: 0.4))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -226,7 +226,7 @@ class ToggleTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: context.colors.cardHigh,
-    borderRadius: BorderRadius.circular(AppRadius.md),
+    shape: BlobBorder(BlobShapes.cloud(title.length, radius: 22, wobble: 0.35)),
     clipBehavior: Clip.antiAlias,
     child: SwitchListTile(
       value: value,
@@ -344,7 +344,8 @@ class MonthPickerField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(AppRadius.md),
+    // Matches the organic outline of the themed input border.
+    customBorder: const BlobInputBorder(),
     onTap: () async {
       final m = await pickMonth(context, initial: value, title: label);
       if (m != null) onChanged(m);
@@ -463,7 +464,7 @@ class MissingSourceScaffold extends ConsumerWidget {
 // Redesign building blocks (cards, heroes, timelines)
 // ---------------------------------------------------------------------------
 
-/// Rounded square holding an icon; [color] is the strong tone and the
+/// Organic badge holding an icon; [color] is the strong tone and the
 /// background is a translucent wash of it (works in light and dark themes).
 class IconBadge extends StatelessWidget {
   const IconBadge(this.icon, {super.key, this.color, this.size = 40});
@@ -474,10 +475,10 @@ class IconBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = color ?? context.colors.accentText;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: fg.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(size * 0.36)),
+    return BlobBadge(
+      color: fg.withValues(alpha: 0.14),
+      size: size,
+      seed: icon.codePoint,
       child: Icon(icon, size: size * 0.5, color: fg),
     );
   }

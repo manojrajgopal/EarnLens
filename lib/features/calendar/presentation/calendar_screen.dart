@@ -13,6 +13,7 @@ import '../../../domain/money/currency.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
 import '../../../shared/widgets/income_visuals.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../analytics/presentation/analytics_widgets.dart';
 import '../../history/presentation/month_picker.dart';
 import '../../refresh/application/app_refresher.dart';
@@ -313,7 +314,7 @@ class _DayCell extends StatelessWidget {
       child: ExcludeSemantics(
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          customBorder: BlobBorder(BlobShapes.chip(date.day)),
           child: SizedBox(
             height: 56,
             child: Stack(alignment: Alignment.topCenter, children: [

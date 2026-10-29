@@ -18,6 +18,7 @@ import '../../../domain/models/settings.dart';
 import '../../../domain/money/currency.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../authentication/application/session_controller.dart';
 import 'settings_widgets.dart';
 
@@ -409,14 +410,19 @@ class _ThemeOption extends StatelessWidget {
           AnimatedContainer(
             duration: reduce ? Duration.zero : AppDurations.medium,
             curve: AppCurves.emphasized,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.md + 4),
-              border: Border.all(color: selected ? c.accentText : c.line, width: selected ? 2 : 1),
-              boxShadow: selected ? AppShadows.card(Theme.of(context).brightness) : null,
+            padding: const EdgeInsets.all(5),
+            decoration: ShapeDecoration(
+              shape: BlobBorder(
+                BlobSpec(seed: 60 + mode.index, radius: 26, wobble: 0.4, wave: 1.4),
+                side: BorderSide(color: selected ? c.accentText : c.line, width: selected ? 2 : 1),
+              ),
+              shadows: selected ? AppShadows.card(Theme.of(context).brightness) : null,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+            child: ClipPath(
+              // A calmer inner silhouette so the preview never pokes past the outline.
+              clipper: ShapeBorderClipper(
+                shape: BlobBorder(BlobSpec(seed: 60 + mode.index, radius: 20, wobble: 0.25, wave: 1)),
+              ),
               child: AspectRatio(
                 aspectRatio: 0.82,
                 child: switch (mode) {
@@ -486,7 +492,10 @@ class _MiniPreview extends StatelessWidget {
           Expanded(
             flex: 5,
             child: Container(
-              decoration: BoxDecoration(gradient: AppGradients.hero, borderRadius: BorderRadius.circular(8)),
+              decoration: const ShapeDecoration(
+                gradient: AppGradients.hero,
+                shape: BlobBorder(BlobSpec(seed: 1, radius: 9, wobble: 0.5, wave: 1)),
+              ),
               padding: const EdgeInsets.all(5),
               alignment: Alignment.bottomLeft,
               child: bar(0.6, AppColors.white.withValues(alpha: 0.85)),
@@ -498,18 +507,18 @@ class _MiniPreview extends StatelessWidget {
             child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Expanded(
                 child: Container(
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: dark ? AppColors.violet.withValues(alpha: 0.3) : AppColors.lilacSoft,
-                    borderRadius: BorderRadius.circular(6),
+                    shape: const BlobBorder(BlobSpec(seed: 2, radius: 7, wobble: 0.5, wave: 0.8)),
                   ),
                 ),
               ),
               const SizedBox(width: 4),
               Expanded(
                 child: Container(
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: dark ? AppColors.peach.withValues(alpha: 0.3) : AppColors.peachSoft,
-                    borderRadius: BorderRadius.circular(6),
+                    shape: const BlobBorder(BlobSpec(seed: 3, radius: 7, wobble: 0.5, wave: 0.8)),
                   ),
                 ),
               ),
@@ -518,7 +527,12 @@ class _MiniPreview extends StatelessWidget {
           const SizedBox(height: 5),
           Expanded(
             flex: 2,
-            child: Container(decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(6))),
+            child: Container(
+              decoration: ShapeDecoration(
+                color: card,
+                shape: const BlobBorder(BlobSpec(seed: 4, radius: 7, wobble: 0.5, wave: 0.8)),
+              ),
+            ),
           ),
         ]),
       ),
@@ -877,10 +891,10 @@ class _SecurityStatus extends StatelessWidget {
       dark: !protected,
       semanticLabel: protected ? 'EarnLens is protected with a PIN' : 'EarnLens is not protected with a PIN',
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(color: AppColors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(16)),
+        BlobBadge(
+          size: 48,
+          seed: 7,
+          color: AppColors.white.withValues(alpha: 0.2),
           child: Icon(protected ? Icons.verified_user_rounded : Icons.gpp_maybe_outlined, color: AppColors.white),
         ),
         const SizedBox(width: AppSpace.lg),

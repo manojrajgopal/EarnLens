@@ -10,6 +10,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../data/local/data_wiper.dart';
 import '../../../shared/layout/page_layout.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../settings/presentation/settings_widgets.dart';
 import '../application/session_controller.dart';
 import 'pin_pad.dart';
@@ -105,6 +106,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
             const SizedBox(height: 16),
             if (_biometricAvailable) ...[
               _OptionCard(
+                seed: 1,
                 child: SettingsTile(
                   icon: Icons.fingerprint_rounded,
                   tone: SettingsTone.mint,
@@ -116,6 +118,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
               const SizedBox(height: AppSpace.sm),
             ],
             _OptionCard(
+              seed: 2,
               child: SettingsTile(
                 icon: Icons.delete_forever_outlined,
                 danger: true,
@@ -251,15 +254,16 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   }
 }
 
-/// Rounded tinted container for an option row in a sheet.
+/// Organic tinted container for an option row in a sheet.
 class _OptionCard extends StatelessWidget {
-  const _OptionCard({required this.child});
+  const _OptionCard({required this.child, this.seed = 0});
   final Widget child;
+  final int seed;
 
   @override
   Widget build(BuildContext context) => Material(
         color: context.colors.cardHigh,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        shape: BlobBorder(BlobShapes.cloud(seed, radius: 22, wobble: 0.45)),
         clipBehavior: Clip.antiAlias,
         child: child,
       );

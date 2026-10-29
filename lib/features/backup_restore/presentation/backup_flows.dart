@@ -11,6 +11,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../data/backup/backup_service.dart';
 import '../../../domain/models/settings.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../settings/presentation/settings_widgets.dart';
 
 /// Friendly names for database tables shown in previews and storage info.
@@ -115,7 +116,10 @@ class _CreateBackupSheetState extends ConsumerState<_CreateBackupSheet> {
               ),
               const SizedBox(height: AppSpace.lg),
               Container(
-                decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.md)),
+                decoration: ShapeDecoration(
+                  color: c.cardHigh,
+                  shape: BlobBorder(BlobShapes.cloud(11, radius: 22, wobble: 0.45)),
+                ),
                 child: SettingsSwitch(
                   icon: _encrypt ? Icons.lock_rounded : Icons.lock_open_rounded,
                   tone: _encrypt ? SettingsTone.mint : SettingsTone.peach,
@@ -419,7 +423,10 @@ class _RestorePreviewSheetState extends State<_RestorePreviewSheet> {
             const SizedBox(height: AppSpace.lg),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg, vertical: AppSpace.md),
-              decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.md)),
+              decoration: ShapeDecoration(
+                color: c.cardHigh,
+                shape: BlobBorder(BlobShapes.cloud(12, radius: 22, wobble: 0.45)),
+              ),
               child: Column(children: [
                 _kv(context, 'Created', created),
                 _kv(context, 'App version', p.appVersion),
@@ -431,13 +438,10 @@ class _RestorePreviewSheetState extends State<_RestorePreviewSheet> {
               Text('This backup contains no records.', style: AppType.body)
             else
               Wrap(spacing: AppSpace.sm, runSpacing: AppSpace.sm, children: [
-                for (final (label, n) in rows)
+                for (final (i, (label, n)) in rows.indexed)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: c.accentSoft,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
+                    decoration: ShapeDecoration(color: c.accentSoft, shape: BlobBorder(BlobShapes.chip(i))),
                     child: Text.rich(
                       TextSpan(children: [
                         TextSpan(
@@ -461,20 +465,22 @@ class _RestorePreviewSheetState extends State<_RestorePreviewSheet> {
                     padding: const EdgeInsets.only(bottom: AppSpace.sm),
                     child: AnimatedContainer(
                       duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : AppDurations.fast,
-                      decoration: BoxDecoration(
+                      decoration: ShapeDecoration(
                         color: _mode == m
                             ? (m == RestoreMode.replace ? c.errorSoft : c.accentSoft)
                             : c.cardHigh,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(
-                          color: _mode == m
-                              ? (m == RestoreMode.replace ? c.error : c.accentText).withValues(alpha: 0.5)
-                              : Colors.transparent,
-                          width: 1.4,
+                        shape: BlobBorder(
+                          BlobShapes.cloud(20 + m.index, radius: 22, wobble: 0.45),
+                          side: BorderSide(
+                            color: _mode == m
+                                ? (m == RestoreMode.replace ? c.error : c.accentText).withValues(alpha: 0.5)
+                                : Colors.transparent,
+                            width: 1.4,
+                          ),
                         ),
                       ),
                       child: RadioListTile<RestoreMode>(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        shape: BlobBorder(BlobShapes.cloud(20 + m.index, radius: 22, wobble: 0.45)),
                         contentPadding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
                         value: m,
                         title: Text(m.label, style: AppType.label.copyWith(fontSize: 15, fontWeight: FontWeight.w700)),

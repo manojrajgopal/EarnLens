@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../settings/presentation/settings_widgets.dart';
 
 class _Topic {
@@ -103,13 +104,10 @@ class HelpScreen extends StatelessWidget {
             child: EarnCard(
               accent: true,
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                BlobBadge(
+                  size: 48,
+                  seed: 21,
+                  color: AppColors.white.withValues(alpha: 0.2),
                   child: const Icon(Icons.support_rounded, color: AppColors.white),
                 ),
                 const SizedBox(width: AppSpace.lg),

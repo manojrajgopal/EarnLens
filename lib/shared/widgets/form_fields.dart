@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 import '../../domain/money/currency.dart';
 import '../../domain/money/money_parser.dart';
+import 'organic.dart';
 
 /// Amount input that parses to integer minor units without floating point.
 class MoneyField extends StatelessWidget {
@@ -101,7 +102,8 @@ class DateField extends FormField<LocalDate> {
 
             return InkWell(
               onTap: pick,
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              // Ripple follows the field's organic outline.
+              customBorder: const BlobInputBorder(),
               child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: label,

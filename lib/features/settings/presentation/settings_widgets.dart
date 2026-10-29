@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/layout/page_layout.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 
 /// Pastel colour families for settings icon badges.
 enum SettingsTone { violet, peach, mint, sky, rose }
@@ -165,10 +166,11 @@ class SettingsIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final (fg, bg) = settingsToneColors(context, tone, danger: danger);
     return ExcludeSemantics(
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+      child: BlobBadge(
+        size: 42,
+        // Seeded by the icon so each row keeps its own stable pebble.
+        seed: icon.codePoint,
+        color: bg,
         child: Icon(icon, size: 21, color: fg),
       ),
     );
@@ -320,17 +322,19 @@ class NoteCard extends StatelessWidget {
     final fg = warning ? c.warning : c.accentText;
     return Container(
       margin: const EdgeInsets.only(top: AppSpace.md),
-      padding: const EdgeInsets.all(AppSpace.lg - 2),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(AppSpace.lg),
+      decoration: ShapeDecoration(
         color: warning ? c.warningSoft : c.accentSoft,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: fg.withValues(alpha: 0.12)),
+        shape: BlobBorder(
+          BlobShapes.cloud(warning ? 13 : 12, radius: 22, wobble: 0.4),
+          side: BorderSide(color: fg.withValues(alpha: 0.12)),
+        ),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(color: c.card.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(10)),
+        BlobBadge(
+          size: 32,
+          seed: icon.codePoint,
+          color: c.card.withValues(alpha: 0.7),
           child: Icon(icon, size: 18, color: fg),
         ),
         const SizedBox(width: AppSpace.md),
@@ -432,21 +436,25 @@ class _OptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = colors;
+    // Seeded by the label so each option keeps its own stable silhouette.
+    final spec = BlobShapes.cloud(label.length, radius: 20, wobble: 0.35);
     return Semantics(
       selected: selected,
       button: true,
       child: Material(
         color: selected ? c.accentSoft : c.cardHigh,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        shape: BlobBorder(spec),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          customBorder: BlobBorder(spec),
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minHeight: 54),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: selected ? c.accentText.withValues(alpha: 0.5) : Colors.transparent, width: 1.4),
+            decoration: ShapeDecoration(
+              shape: BlobBorder(
+                spec,
+                side: BorderSide(color: selected ? c.accentText.withValues(alpha: 0.5) : Colors.transparent, width: 1.4),
+              ),
             ),
             child: Row(children: [
               Expanded(

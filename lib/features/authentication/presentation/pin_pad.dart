@@ -8,6 +8,7 @@ import '../../../core/security/pin_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 
 /// The brand mark on a soft white plate with a lavender glow.
 class BrandBadge extends StatelessWidget {
@@ -17,10 +18,10 @@ class BrandBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: EdgeInsets.all(size * 0.1),
-        decoration: BoxDecoration(
+        decoration: ShapeDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(size * 0.32),
-          boxShadow: AppShadows.glow,
+          shape: BlobBorder(BlobSpec(seed: 7, radius: size * 0.36, wobble: 0.5, wave: 1.2)),
+          shadows: AppShadows.glow,
         ),
         child: EarnLensMark(size: size * 0.8),
       );
@@ -330,22 +331,27 @@ class _Key extends StatelessWidget {
     final c = context.colors;
     final brightness = Theme.of(context).brightness;
     final fg = accent ? c.accentText : c.ink;
+    // Each key is a soft pebble seeded by its digit/glyph so the pad reads as
+    // a cluster of distinct shapes that never change between frames.
+    final shape = BlobBorder(
+      BlobSpec(seed: label != null ? label!.codeUnitAt(0) : icon!.codePoint, radius: size * 0.42, wobble: 0.5, wave: 1.2),
+    );
     return Semantics(
       button: true,
       enabled: enabled,
       label: semantic ?? label,
       excludeSemantics: true,
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: plain || accent ? null : AppShadows.card(brightness),
+        decoration: ShapeDecoration(
+          shape: shape,
+          shadows: plain || accent ? null : AppShadows.card(brightness),
         ),
         child: Material(
           color: plain ? Colors.transparent : (accent ? c.accentSoft : c.card),
-          shape: const CircleBorder(),
+          shape: shape,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            customBorder: const CircleBorder(),
+            customBorder: shape,
             splashColor: c.accent.withValues(alpha: 0.25),
             highlightColor: c.accentSoft,
             onTap: onTap,

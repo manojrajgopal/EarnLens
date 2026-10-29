@@ -4,6 +4,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../domain/models/income_source.dart';
 import '../../../../shared/widgets/form_fields.dart';
+import '../../../../shared/widgets/organic.dart';
 
 /// Edits working weekdays and the daily working window.
 class ScheduleEditor extends StatelessWidget {
@@ -18,8 +19,8 @@ class ScheduleEditor extends StatelessWidget {
     final s = schedule;
     final hours = s.workingMinutesPerDay > 0 ? s.workingMinutesPerDay / 60 : 0;
     return Container(
-      padding: const EdgeInsets.all(AppSpace.lg),
-      decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.md)),
+      padding: const EdgeInsets.fromLTRB(AppSpace.lg + 2, AppSpace.lg + 2, AppSpace.lg + 2, AppSpace.lg),
+      decoration: ShapeDecoration(color: c.cardHigh, shape: BlobBorder(BlobShapes.cloud(17, radius: 22, wobble: 0.4))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -319,7 +319,7 @@ class _ExpectedActualCard extends ConsumerWidget {
               button: true,
               label: 'Open ${formatMonth(p.range.start.yearMonth)}',
               child: InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
+                customBorder: BlobBorder(BlobShapes.cloud(i, radius: AppRadius.sm, wobble: 0.3)),
                 onTap: () => context.push('/insights/month/${p.range.start.yearMonth.toIso()}'),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 56),
@@ -613,7 +613,7 @@ class _SalaryHistoryCard extends ConsumerWidget {
           Text('No salary sources in this view.', style: AppType.bodySmall.copyWith(color: c.inkMuted)),
         for (final (i, r) in rows.indexed)
           InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
+            customBorder: BlobBorder(BlobShapes.cloud(i + 20, radius: AppRadius.sm, wobble: 0.3)),
             onTap: () => context.push('/income/${r.source.id}'),
             child: IntrinsicHeight(
               child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -699,7 +699,7 @@ class _BonusHistoryCard extends ConsumerWidget {
           Text('No bonuses recorded yet.', style: AppType.bodySmall.copyWith(color: c.inkMuted)),
         for (final (i, b) in rows.indexed)
           InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
+            customBorder: BlobBorder(BlobShapes.cloud(i + 40, radius: AppRadius.sm, wobble: 0.3)),
             onTap: b.item.sourceId == null ? null : () => context.push('/income/${b.item.sourceId}/item?item=${b.item.id}'),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 56),

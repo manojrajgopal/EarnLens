@@ -215,8 +215,11 @@ class _ChangesCard extends ConsumerWidget {
             final (bg, fg) = pastelAt(context, i);
             return Container(
               margin: const EdgeInsets.only(bottom: AppSpace.md),
-              padding: const EdgeInsets.fromLTRB(AppSpace.md, AppSpace.md, 4, AppSpace.sm),
-              decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.md)),
+              padding: const EdgeInsets.fromLTRB(AppSpace.md, AppSpace.md, 6, AppSpace.sm),
+              decoration: ShapeDecoration(
+                color: c.cardHigh,
+                shape: BlobBorder(BlobShapes.cloud(30 + i, radius: 22, wobble: 0.45)),
+              ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   IconBadge(d.icon, color: fg, background: bg, size: 40),

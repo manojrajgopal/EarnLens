@@ -8,6 +8,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../domain/calculation/what_if.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 import '../application/what_if_data.dart';
 
 /// One hypothetical change as shown in the list.
@@ -136,10 +137,10 @@ class _ChangeSheetState extends ConsumerState<_ChangeSheet> {
                 Container(
                   width: AppIconSize.badge,
                   height: AppIconSize.badge,
-                  decoration: BoxDecoration(
+                  decoration: const ShapeDecoration(
                     gradient: AppGradients.orb,
-                    borderRadius: BorderRadius.circular(AppRadius.sm + 2),
-                    boxShadow: AppShadows.glow,
+                    shape: BlobBorder(BlobSpec(seed: 17, radius: AppIconSize.badge * 0.42, wobble: 0.5, wave: 1.2)),
+                    shadows: AppShadows.glow,
                   ),
                   child: const Icon(Icons.science_outlined, color: AppColors.white),
                 ),
@@ -165,7 +166,10 @@ class _ChangeSheetState extends ConsumerState<_ChangeSheet> {
               if (!_available)
                 Container(
                   padding: const EdgeInsets.all(AppSpace.lg),
-                  decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.md)),
+                  decoration: ShapeDecoration(
+                    color: c.cardHigh,
+                    shape: BlobBorder(BlobShapes.cloud(18, radius: 22, wobble: 0.45)),
+                  ),
                   child: Row(children: [
                     Icon(Icons.info_outline_rounded, color: c.accentText),
                     const SizedBox(width: AppSpace.md),

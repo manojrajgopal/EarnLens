@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../shared/widgets/organic.dart';
 import 'tokens.dart';
 
 /// Semantic colours not covered by [ColorScheme].
@@ -216,7 +217,7 @@ abstract final class AppTheme {
         color: c.card,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        shape: BlobBorder(BlobShapes.cloud(1)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -271,13 +272,12 @@ abstract final class AppTheme {
         helperMaxLines: 3,
         errorMaxLines: 3,
         errorStyle: AppType.bodySmall.copyWith(color: c.error),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: c.line)),
-        enabledBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: c.line)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: c.accent, width: 2)),
-        errorBorder:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: c.error)),
+        border: BlobInputBorder(borderSide: BorderSide(color: c.line, width: 1.2)),
+        enabledBorder: BlobInputBorder(borderSide: BorderSide(color: c.accent.withValues(alpha: 0.28), width: 1.2)),
+        focusedBorder: BlobInputBorder(borderSide: BorderSide(color: c.accent, width: 2)),
+        errorBorder: BlobInputBorder(borderSide: BorderSide(color: c.error, width: 1.2)),
+        focusedErrorBorder: BlobInputBorder(borderSide: BorderSide(color: c.error, width: 2)),
+        disabledBorder: BlobInputBorder(borderSide: BorderSide(color: c.line)),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.white : null),
@@ -302,13 +302,13 @@ abstract final class AppTheme {
         dragHandleColor: c.accent.withValues(alpha: 0.5),
         dragHandleSize: const Size(44, 5),
         modalBarrierColor: AppColors.violetNight.withValues(alpha: 0.35),
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl))),
+        shape: const BlobBorder(BlobShapes.sheet),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: c.card,
         surfaceTintColor: Colors.transparent,
         barrierColor: AppColors.violetNight.withValues(alpha: 0.35),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
+        shape: const BlobBorder(BlobShapes.dialog),
         titleTextStyle: AppType.title.copyWith(color: c.ink, fontWeight: FontWeight.w700),
       ),
       expansionTileTheme: ExpansionTileThemeData(
@@ -323,7 +323,7 @@ abstract final class AppTheme {
         backgroundColor: AppColors.violetNight,
         contentTextStyle: AppType.label.copyWith(color: AppColors.white),
         actionTextColor: AppColors.lavender,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        shape: BlobBorder(BlobShapes.chip(4)),
       ),
       listTileTheme: ListTileThemeData(
         iconColor: c.ink,
@@ -332,6 +332,20 @@ abstract final class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
       ),
       dividerTheme: DividerThemeData(color: c.line, thickness: 1, space: 1),
+      popupMenuTheme: PopupMenuThemeData(
+        color: c.card,
+        surfaceTintColor: Colors.transparent,
+        shape: BlobBorder(BlobShapes.cloud(9, radius: 22, wobble: 0.4)),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: c.card,
+        surfaceTintColor: Colors.transparent,
+        shape: const BlobBorder(BlobShapes.dialog),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: c.card,
+        shape: const BlobBorder(BlobShapes.dialog),
+      ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: c.accent, linearTrackColor: c.accentSoft),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: c.card,

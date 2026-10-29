@@ -421,18 +421,32 @@ class _HeroCard extends ConsumerWidget {
 
 /// Small labelled amount on a soft tile (scales down instead of overflowing).
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, required this.icon, required this.color});
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.seed,
+  });
   final String label;
   final String value;
   final IconData icon;
   final Color color;
 
+  /// Picks one of the four pastel pebble silhouettes.
+  final int seed;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
-      decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.md)),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // A pastel wash of the tile's accent colour on an organic pebble.
+    final tint = Color.alphaBlend(color.withValues(alpha: dark ? 0.18 : 0.12), c.card);
+    return OrganicTile(
+      spec: BlobShapes.pebble(seed),
+      color: tint,
+      glow: color,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -493,6 +507,7 @@ class _ThisMonth extends ConsumerWidget {
           children: [
             Expanded(
               child: _StatTile(
+                seed: 0,
                 label: 'Expected',
                 value: fmt.minor(sum.expected),
                 icon: Icons.flag_outlined,
@@ -502,6 +517,7 @@ class _ThisMonth extends ConsumerWidget {
             const SizedBox(width: AppSpace.sm),
             Expanded(
               child: _StatTile(
+                seed: 1,
                 label: 'Earned so far',
                 value: sum.hasActual ? fmt.minor(sum.actual) : '—',
                 icon: Icons.trending_up_rounded,
@@ -515,6 +531,7 @@ class _ThisMonth extends ConsumerWidget {
           children: [
             Expanded(
               child: _StatTile(
+                seed: 2,
                 label: 'Received',
                 value: fmt.minor(sum.received),
                 icon: Icons.south_west_rounded,
@@ -524,6 +541,7 @@ class _ThisMonth extends ConsumerWidget {
             const SizedBox(width: AppSpace.sm),
             Expanded(
               child: _StatTile(
+                seed: 3,
                 label: 'Outstanding',
                 value: fmt.minor(sum.outstanding),
                 icon: Icons.hourglass_bottom_rounded,
@@ -556,7 +574,11 @@ class _MonthBadge extends StatelessWidget {
     return Container(
       width: 46,
       height: 46,
-      decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(AppRadius.sm + 2)),
+      decoration: ShapeDecoration(
+        color: c.accentSoft,
+        // Seeded by month so each row gets its own stable pebble.
+        shape: BlobBorder(BlobSpec(seed: month.year * 12 + month.month, radius: 19, wobble: 0.5, wave: 1.2)),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -754,7 +776,7 @@ class _RateHistory extends ConsumerWidget {
                     last: i == list.length - 1,
                     active: r == current,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      customBorder: BlobBorder(BlobShapes.cloud(i + 7, radius: AppRadius.sm, wobble: 0.3)),
                       onTap: () => context.push('/income/${s.id}/revision?rev=${r.id}'),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),

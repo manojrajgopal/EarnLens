@@ -9,6 +9,7 @@ import '../../../domain/models/enums.dart';
 import '../../../domain/models/income_source.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../income_sources/presentation/widgets/income_common.dart';
 import '../../refresh/application/app_refresher.dart';
 
@@ -312,9 +313,12 @@ class _DayBadge extends StatelessWidget {
     return Container(
       width: 46,
       height: 50,
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: holiday ? c.accentSoft : c.warningSoft,
-        borderRadius: BorderRadius.circular(AppRadius.sm + 2),
+        // Seeded by date so each row keeps its own stable pebble.
+        shape: BlobBorder(
+          BlobSpec(seed: date.year * 372 + date.month * 31 + date.day, radius: 19, wobble: 0.5, wave: 1.2),
+        ),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

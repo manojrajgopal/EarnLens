@@ -11,6 +11,7 @@ import '../../../domain/money/currency.dart';
 import '../../../domain/money/fraction.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 
 /// Opens the add/edit form for a user calendar event.
 Future<void> showEventForm(BuildContext context, {CalendarEvent? event, required LocalDate date}) =>
@@ -121,10 +122,10 @@ class _EventFormState extends ConsumerState<_EventForm> {
                 Container(
                   width: AppIconSize.badge,
                   height: AppIconSize.badge,
-                  decoration: BoxDecoration(
+                  decoration: const ShapeDecoration(
                     gradient: AppGradients.orb,
-                    borderRadius: BorderRadius.circular(AppRadius.sm + 2),
-                    boxShadow: AppShadows.glow,
+                    shape: BlobBorder(BlobSpec(seed: 13, radius: AppIconSize.badge * 0.42, wobble: 0.5, wave: 1.2)),
+                    shadows: AppShadows.glow,
                   ),
                   child: Icon(_editing ? Icons.edit_calendar_rounded : Icons.event_note_outlined, color: AppColors.white),
                 ),
@@ -162,7 +163,7 @@ class _EventFormState extends ConsumerState<_EventForm> {
               const SizedBox(height: AppSpace.lg),
               Material(
                 color: c.cardHigh,
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                shape: BlobBorder(BlobShapes.cloud(14, radius: 22, wobble: 0.35)),
                 clipBehavior: Clip.antiAlias,
                 child: Theme(
                   data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -208,11 +209,11 @@ class _EventFormState extends ConsumerState<_EventForm> {
               const SizedBox(height: AppSpace.md),
               Material(
                 color: c.cardHigh,
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                shape: BlobBorder(BlobShapes.cloud(15, radius: 22, wobble: 0.45)),
                 clipBehavior: Clip.antiAlias,
                 child: SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  shape: BlobBorder(BlobShapes.cloud(15, radius: 22, wobble: 0.45)),
                   secondary: Icon(Icons.notifications_active_outlined, color: c.accentText),
                   title: const Text('Remind me'),
                   subtitle: const Text('Get a notification on this day'),

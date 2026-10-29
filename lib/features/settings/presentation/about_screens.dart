@@ -7,6 +7,7 @@ import '../../../core/routing/app_shell.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 import 'settings_widgets.dart';
 
 class AboutScreen extends ConsumerWidget {
@@ -26,10 +27,10 @@ class AboutScreen extends ConsumerWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
+                decoration: ShapeDecoration(
                   color: AppColors.white,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  boxShadow: AppShadows.glow,
+                  shape: BlobBorder(BlobShapes.chip(3)),
+                  shadows: AppShadows.glow,
                 ),
                 child: const EarnLensMark(size: 52),
               ),
@@ -121,13 +122,10 @@ class PrivacyScreen extends StatelessWidget {
             child: EarnCard(
               accent: true,
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                BlobBadge(
+                  size: 48,
+                  seed: 7,
+                  color: AppColors.white.withValues(alpha: 0.2),
                   child: const Icon(Icons.verified_user_rounded, color: AppColors.white),
                 ),
                 const SizedBox(width: AppSpace.lg),

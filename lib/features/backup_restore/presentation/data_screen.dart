@@ -11,6 +11,7 @@ import '../../../data/local/data_wiper.dart';
 import '../../../domain/models/settings.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../authentication/application/session_controller.dart';
 import '../../settings/presentation/settings_widgets.dart';
 import '../../refresh/application/app_refresher.dart';
@@ -404,9 +405,9 @@ class _ValidationSectionState extends ConsumerState<_ValidationSection> {
                 child: Container(
                   margin: const EdgeInsets.only(top: AppSpace.md),
                   padding: const EdgeInsets.all(AppSpace.md),
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: r.$1 ? c.positiveSoft : c.errorSoft,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    shape: BlobBorder(BlobShapes.cloud(8, radius: 18, wobble: 0.4)),
                   ),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Icon(r.$1 ? Icons.check_circle_rounded : Icons.error_rounded,
@@ -459,13 +460,10 @@ class _BackupHero extends StatelessWidget {
       dark: overdue,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
-            ),
+          BlobBadge(
+            size: 48,
+            seed: 9,
+            color: AppColors.white.withValues(alpha: 0.2),
             child: Icon(overdue ? Icons.cloud_off_rounded : Icons.cloud_done_rounded, color: AppColors.white),
           ),
           const SizedBox(width: AppSpace.lg),

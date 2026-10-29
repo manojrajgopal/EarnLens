@@ -53,3 +53,14 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+// Every release build is also saved as build/app/outputs/flutter-apk/EarnLens.apk.
+// Flutter's own app-release.apk is kept because the Flutter tool looks for it.
+val releaseApk = layout.buildDirectory.file("outputs/apk/release/app-release.apk")
+val namedApk = layout.buildDirectory.file("outputs/flutter-apk/EarnLens.apk")
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    doLast {
+        val source = releaseApk.get().asFile
+        if (source.exists()) source.copyTo(namedApk.get().asFile, overwrite = true)
+    }
+}

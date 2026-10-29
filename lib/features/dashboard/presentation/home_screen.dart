@@ -15,6 +15,7 @@ import '../../authentication/application/session_controller.dart';
 import '../../refresh/application/app_refresher.dart';
 import '../application/dashboard_providers.dart';
 import 'dashboard_cards.dart';
+import 'sunrise_scene.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -65,7 +66,32 @@ class HomeScreen extends ConsumerWidget {
           );
         } else {
           final cards = <Widget>[];
-          for (final (i, card) in visible.indexed) {
+          const paired = {DashboardCardType.upcomingPayments, DashboardCardType.recentTransactions};
+          for (var i = 0; i < visible.length; i++) {
+            final card = visible[i];
+            // On phones, upcoming payments and recent transactions sit side by
+            // side (like the reference) when both are shown consecutively.
+            if (columns == 1 &&
+                contentWidth >= 360 &&
+                i + 1 < visible.length &&
+                paired.contains(card.type) &&
+                paired.contains(visible[i + 1].type) &&
+                card.type != visible[i + 1].type) {
+              final wideFirst = card.type == DashboardCardType.upcomingPayments;
+              cards.add(SizedBox(
+                width: contentWidth,
+                child: EntranceScale(
+                  delay: Duration(milliseconds: 60 * (i.clamp(0, 6))),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(flex: wideFirst ? 57 : 43, child: buildDashboardCard(card)),
+                    const SizedBox(width: 12),
+                    Expanded(flex: wideFirst ? 43 : 57, child: buildDashboardCard(visible[i + 1])),
+                  ]),
+                ),
+              ));
+              i++;
+              continue;
+            }
             cards.add(SizedBox(
               width: cardWidth(card),
               child: EntranceScale(
@@ -80,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
               ));
             }
           }
-          content = Wrap(spacing: gap, runSpacing: 22, children: cards);
+          content = Wrap(spacing: gap, runSpacing: 24, children: cards);
         }
 
         return EarnLensRefreshIndicator(
@@ -90,8 +116,19 @@ class HomeScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: padding,
             children: [
-              const _Header(),
-              const SizedBox(height: 22),
+              Stack(clipBehavior: Clip.none, children: [
+                // Full-bleed illustrated backdrop behind the header and the top
+                // of the hero card.
+                Positioned(
+                  top: -padding.top,
+                  left: -padding.left,
+                  right: -padding.right,
+                  bottom: -64,
+                  child: SunriseScene(groundY: 40, mottoTop: padding.top + 66),
+                ),
+                const _Header(),
+              ]),
+              const SizedBox(height: 14),
               content,
               const SizedBox(height: 20),
               Center(
@@ -126,11 +163,12 @@ class _Header extends ConsumerWidget {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: Text(formatDate(today), style: AppType.label.copyWith(color: c.inkMuted))),
+        Expanded(child: Text(formatDate(today), style: AppType.label.copyWith(color: c.ink.withValues(alpha: 0.65)))),
         _actions(context, ref, privacy: privacy, hidden: hidden, overdue: overdue, name: name),
       ]),
-      const SizedBox(height: 10),
-      Text('$greeting,', style: AppType.headlineLight.copyWith(fontSize: 26)),
+      const SizedBox(height: 2),
+      Text('$greeting,', style: AppType.headlineLight.copyWith(fontSize: 25, fontWeight: FontWeight.w400,
+          fontVariations: const [FontVariation('wght', 450)], color: c.ink)),
       FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.centerLeft,
@@ -144,9 +182,14 @@ class _Header extends ConsumerWidget {
           ),
         ),
       ),
-      const SizedBox(height: 6),
-      Text('Keep tracking your earnings and turn your goals into reality.',
-          style: AppType.bodySmall.copyWith(color: c.inkMuted)),
+      const SizedBox(height: 8),
+      FractionallySizedBox(
+        widthFactor: 0.6,
+        alignment: Alignment.centerLeft,
+        child: Text('Keep tracking your earnings and turn your goals into reality.',
+            style: AppType.bodySmall.copyWith(color: c.ink.withValues(alpha: 0.72), fontSize: 13.5)),
+      ),
+      const SizedBox(height: 46),
     ]);
   }
 
@@ -217,7 +260,7 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-/// Four colourful quick actions; 2×2 on narrow phones.
+/// Four glossy pastel bubbles; 2×2 on very narrow layouts.
 class QuickActions extends ConsumerWidget {
   const QuickActions({super.key});
 
@@ -236,45 +279,54 @@ class QuickActions extends ConsumerWidget {
     return LayoutBuilder(builder: (context, c) {
       // Four across like the reference; 2×2 only on very narrow layouts.
       final cols = c.maxWidth < 300 ? 2 : 4;
-      final gap = c.maxWidth < 380 ? 8.0 : 12.0;
+      final gap = c.maxWidth < 380 ? 6.0 : 8.0;
       final w = (c.maxWidth - gap * (cols - 1)) / cols;
-      final roomy = w >= 96;
+      final roomy = w >= 90;
       return Wrap(spacing: gap, runSpacing: gap, children: [
         for (final (i, a) in actions.indexed)
           SizedBox(
             width: w,
             child: OrganicTile(
-              seed: i + 1,
+              spec: BlobShapes.bubble(i),
               color: dark ? Color.alphaBlend(a.$4.withValues(alpha: 0.2), context.colors.card) : a.$5,
+              glow: a.$4.withValues(alpha: 0.45),
               semanticLabel: '${a.$2}. ${a.$3}',
-              padding: EdgeInsets.fromLTRB(roomy ? 14 : 10, 14, roomy ? 10 : 8, 10),
+              padding: EdgeInsets.fromLTRB(roomy ? 14 : 10, 16, roomy ? 8 : 6, 10),
               onTap: a.$6,
               child: SizedBox(
-                height: roomy ? 128 : 116,
+                height: roomy ? 142 : 128,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Container(
                     width: roomy ? 40 : 34,
                     height: roomy ? 40 : 34,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: a.$4,
-                      boxShadow: [BoxShadow(color: a.$4.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 5))],
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color.lerp(a.$4, Colors.white, 0.2)!, a.$4],
+                      ),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 1.5),
+                      boxShadow: [BoxShadow(color: a.$4.withValues(alpha: 0.45), blurRadius: 12, offset: const Offset(0, 5))],
                     ),
                     child: Icon(a.$1, color: Colors.white, size: roomy ? 22 : 19),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Text(a.$2,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppType.label.copyWith(fontWeight: FontWeight.w700, fontSize: roomy ? 14 : 12.5, height: 1.15)),
-                  const SizedBox(height: 2),
-                  if (roomy)
-                    Text(a.$3,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppType.caption.copyWith(color: context.colors.inkMuted)),
+                      style: AppType.label.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontVariations: const [FontVariation('wght', 700)],
+                          fontSize: roomy ? 14 : 12.5,
+                          height: 1.15)),
+                  const SizedBox(height: 3),
+                  Text(a.$3,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppType.caption.copyWith(color: context.colors.ink.withValues(alpha: 0.6), fontSize: 11.5)),
                   const Spacer(),
-                  Align(alignment: Alignment.bottomRight, child: Icon(Icons.chevron_right_rounded, size: 18, color: a.$4)),
+                  Center(child: Icon(Icons.chevron_right_rounded, size: 20, color: Color.lerp(a.$4, Colors.black, 0.25))),
                 ]),
               ),
             ),

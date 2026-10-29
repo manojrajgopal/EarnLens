@@ -36,6 +36,14 @@ Future<void> _loadFonts() async {
     final loader = FontLoader('MaterialIcons')..addFont(Future.value(ByteData.view(icons.readAsBytesSync().buffer)));
     await loader.load();
   }
+  // Urbanist has no rupee glyph; devices fall back to the system sans. Register
+  // a local sans under the theme's first fallback family so the test renderer
+  // does the same.
+  final sans = File(r'C:\Windows\Fonts\segoeui.ttf');
+  if (sans.existsSync()) {
+    final loader = FontLoader('Roboto')..addFont(Future.value(ByteData.view(sans.readAsBytesSync().buffer)));
+    await loader.load();
+  }
 }
 
 void main() {

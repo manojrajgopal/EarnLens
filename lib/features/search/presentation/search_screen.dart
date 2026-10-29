@@ -13,6 +13,7 @@ import '../../../shared/layout/page_layout.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
 import '../../../shared/widgets/income_visuals.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../refresh/application/app_refresher.dart';
 
 /// Searches income sources, bonuses/benefits, transactions and calendar
@@ -89,8 +90,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ],
             elevation: const WidgetStatePropertyAll(0),
             backgroundColor: WidgetStatePropertyAll(c.card),
-            shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.pill),
+            // Soft organic capsule, matching the app's input fields.
+            shape: WidgetStatePropertyAll(BlobBorder(
+              const BlobSpec(seed: 41, radius: 26, wobble: 0.25, wave: 1.4),
               side: BorderSide(color: c.line),
             )),
             onChanged: (_) => setState(() {}),

@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../shared/layout/page_layout.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../authentication/presentation/pin_pad.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -172,8 +173,8 @@ class _Feature extends StatelessWidget {
     final c = context.colors;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppRadius.md + 2)),
+      padding: const EdgeInsets.all(16),
+      decoration: ShapeDecoration(color: tint, shape: BlobBorder(BlobShapes.cloud(title.length, radius: 24, wobble: 0.45))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

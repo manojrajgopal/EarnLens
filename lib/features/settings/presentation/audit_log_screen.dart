@@ -12,6 +12,7 @@ import '../../../core/theme/tokens.dart';
 import '../../../domain/models/records.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
+import '../../../shared/widgets/organic.dart';
 import '../../refresh/application/app_refresher.dart';
 import 'settings_widgets.dart';
 
@@ -261,8 +262,11 @@ class _JsonBlock extends StatelessWidget {
       else
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(AppSpace.md),
-          decoration: BoxDecoration(color: c.cardHigh, borderRadius: BorderRadius.circular(AppRadius.sm)),
+          padding: const EdgeInsets.all(AppSpace.md + 2),
+          decoration: ShapeDecoration(
+            color: c.cardHigh,
+            shape: BlobBorder(BlobShapes.cloud(title.length, radius: 18, wobble: 0.3)),
+          ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: SelectableText(
