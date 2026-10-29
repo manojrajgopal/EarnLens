@@ -50,10 +50,14 @@ flutter config --jdk-dir="C:\Program Files\Java\jdk-21"
 ### Builds
 
 ```bash
-flutter build apk --release      # Android
+flutter build apk --release      # Android → build/app/outputs/flutter-apk/EarnLens.apk
 flutter build web --release      # Web (see docs/PLATFORM_SUPPORT.md for hosting headers)
-flutter build ios                # iOS — requires macOS + Xcode (not verified in this repo yet)
 ```
+
+iOS can only be compiled on macOS (`flutter build ios` does not exist on Windows). The CI workflow
+builds `EarnLens.ipa` on a GitHub-hosted Mac on every push to `main` (or on demand from
+**Actions → CI → Run workflow**); download it from the run's artifacts and install it from Windows
+as described in [docs/IOS_INSTALL.md](docs/IOS_INSTALL.md).
 
 ### Tests
 

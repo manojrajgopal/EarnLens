@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/widgets.dart';
 import 'package:share_plus/share_plus.dart';
 
 class PickedFile {
@@ -19,6 +20,14 @@ abstract interface class FileService {
   Future<PickedFile?> pick({List<String>? extensions});
 }
 
+Rect? _screenCentre() {
+  final views = WidgetsBinding.instance.platformDispatcher.views;
+  if (views.isEmpty) return null;
+  final view = views.first;
+  final size = view.physicalSize / view.devicePixelRatio;
+  return Rect.fromCenter(center: size.center(Offset.zero), width: 1, height: 1);
+}
+
 class PlatformFileService implements FileService {
   const PlatformFileService();
 
@@ -33,6 +42,9 @@ class PlatformFileService implements FileService {
     await SharePlus.instance.share(ShareParams(
       files: [XFile.fromData(bytes, name: fileName, mimeType: mimeType)],
       fileNameOverrides: [fileName],
+      // iPad presents the share sheet as a popover and requires an anchor;
+      // centre it on screen. Ignored on phones and Android.
+      sharePositionOrigin: _screenCentre(),
     ));
   }
 

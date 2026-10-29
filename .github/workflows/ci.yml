@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets you build the apps on demand from the Actions tab.
+  workflow_dispatch:
 
 jobs:
   test:
@@ -39,6 +41,40 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build apk --release
+      - name: Upload EarnLens.apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: EarnLens-android
+          path: build/app/outputs/flutter-apk/EarnLens.apk
+          if-no-files-found: error
+
+  # iOS builds need macOS and Xcode, so they run on a GitHub-hosted Mac.
+  # The app is built without code signing: install it from Windows with a
+  # sideloading tool that signs it with your Apple ID (see docs/IOS_INSTALL.md).
+  build-ios:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.8
+          cache: true
+      - run: flutter pub get
+      - name: Build iOS app (unsigned)
+        run: flutter build ios --release --no-codesign
+      - name: Package EarnLens.ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry EarnLens.ipa Payload
+      - name: Upload EarnLens.ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: EarnLens-ios
+          path: EarnLens.ipa
+          if-no-files-found: error
 
   build-web:
     needs: test

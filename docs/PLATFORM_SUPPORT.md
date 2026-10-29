@@ -2,7 +2,7 @@
 
 | Capability | Android | iOS | Web |
 |---|---|---|---|
-| App, calculations, history, settings | ✅ built & tested | ⚠️ code ready, not compiled (needs macOS + Xcode) | ✅ built |
+| App, calculations, history, settings | ✅ built & tested | ✅ built unsigned on a GitHub-hosted Mac (`build-ios` CI job); install from Windows per [IOS_INSTALL.md](IOS_INSTALL.md) | ✅ built |
 | Storage | SQLite (app sandbox) | SQLite (app sandbox) | SQLite WASM in OPFS/IndexedDB — can be cleared, per-browser |
 | PIN lock | ✅ Keystore-backed secure storage | ✅ Keychain | ✅ WebCrypto-encrypted localStorage (weaker; no hardware backing) |
 | Biometrics | ✅ fingerprint/face | ✅ Face ID/Touch ID (`NSFaceIDUsageDescription` set) | ❌ not offered |
@@ -35,10 +35,13 @@ for more than a day the widget asks the user to open it.
 ## iOS
 
 ```bash
-cd ios && pod install && cd .. && flutter build ios
+flutter build ios --release --no-codesign   # on macOS; CI does this and packages EarnLens.ipa
 ```
 
-Not verified in this environment (Windows). WidgetKit widget is deferred: it requires adding a
+Plugins are linked through Swift Package Manager (CocoaPods is used automatically for any plugin
+that needs it). From Windows, get `EarnLens.ipa` from the CI run's artifacts and sideload it —
+see [IOS_INSTALL.md](IOS_INSTALL.md). Icons are opaque (App Store requirement) and the share sheet
+is anchored for iPad popovers. WidgetKit widget is deferred: it requires adding a
 Widget Extension target and App Group in Xcode; the Dart side (`HomeWidgetBridge`) is designed for
 it (`home_widget` supports iOS app groups).
 
