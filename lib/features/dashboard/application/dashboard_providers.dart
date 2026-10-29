@@ -23,13 +23,17 @@ DateRange counterRangeFor(CounterRange r, LocalDate today) => switch (r) {
 
 int _now(Ref ref) => ref.watch(clockProvider).now().microsecondsSinceEpoch;
 
-/// Current-month summary (non-live parts; recomputed when data changes).
+/// Live "now": figures that include the current, still-accruing period watch
+/// this so they update every second without a refresh.
+int _liveNow(Ref ref) => ref.watch(liveNowProvider).microsecondsSinceEpoch;
+
+/// Current-month summary, updated live as earnings accrue.
 final monthSummaryProvider = Provider.family<PeriodSummary, DashboardCardType>((ref, type) {
   final today = ref.watch(todayProvider);
   return ref.watch(earningsCalculatorProvider).summarize(
         ref.watch(snapshotProvider),
         DateRange.month(today.yearMonth),
-        _now(ref),
+        _liveNow(ref),
         currencyCode: ref.watch(currencyProvider).code,
         sourceIds: cardSources(ref, type),
       );
@@ -59,25 +63,43 @@ final ratesProvider = Provider<Map<EarningUnit, Fraction>>((ref) {
   };
 });
 
-/// Monthly series ending this month; the argument is the number of months.
-final trendProvider = Provider.family<List<PeriodSummary>, int>((ref, months) {
+/// Completed months before this one (static; recomputed when data changes).
+final _trendHistoryProvider = Provider.family<List<PeriodSummary>, int>((ref, months) {
   final today = ref.watch(todayProvider);
   return ref.watch(earningsCalculatorProvider).monthlySeries(
         ref.watch(snapshotProvider),
-        today.yearMonth,
-        months,
+        today.yearMonth.previous,
+        months - 1,
         _now(ref),
         currencyCode: ref.watch(currencyProvider).code,
         sourceIds: cardSources(ref, DashboardCardType.trend),
       );
 });
 
-/// Summary for any month (expected vs actual card month switcher).
+/// Monthly series ending this month; the argument is the number of months.
+/// Only the current month is recomputed on each live tick.
+final trendProvider = Provider.family<List<PeriodSummary>, int>((ref, months) {
+  final today = ref.watch(todayProvider);
+  return [
+    ...ref.watch(_trendHistoryProvider(months)),
+    ref.watch(earningsCalculatorProvider).summarize(
+          ref.watch(snapshotProvider),
+          DateRange.month(today.yearMonth),
+          _liveNow(ref),
+          currencyCode: ref.watch(currencyProvider).code,
+          sourceIds: cardSources(ref, DashboardCardType.trend),
+        ),
+  ];
+});
+
+/// Summary for any month (expected vs actual card month switcher); live for
+/// the current month.
 final monthSummaryForProvider = Provider.family<PeriodSummary, YearMonth>((ref, month) {
+  final current = month == ref.watch(todayProvider).yearMonth;
   return ref.watch(earningsCalculatorProvider).summarize(
         ref.watch(snapshotProvider),
         DateRange.month(month),
-        _now(ref),
+        current ? _liveNow(ref) : _now(ref),
         currencyCode: ref.watch(currencyProvider).code,
         sourceIds: cardSources(ref, DashboardCardType.expectedVsActual),
       );
@@ -117,7 +139,8 @@ final yearSummaryProvider = Provider.family<PeriodSummary, (int, DashboardCardTy
   return ref.watch(earningsCalculatorProvider).summarize(
         ref.watch(snapshotProvider),
         DateRange(LocalDate(year, 1, 1), end),
-        _now(ref),
+        // Year to date accrues live; earlier years are fixed.
+        year == today.year ? _liveNow(ref) : _now(ref),
         currencyCode: ref.watch(currencyProvider).code,
         sourceIds: cardSources(ref, type),
       );
@@ -128,7 +151,7 @@ final monthForecastProvider = Provider<Forecast>((ref) {
   return ref.watch(forecastCalculatorProvider).forMonth(
         ref.watch(snapshotProvider),
         today.yearMonth,
-        _now(ref),
+        _liveNow(ref),
         currencyCode: ref.watch(currencyProvider).code,
         sourceIds: cardSources(ref, DashboardCardType.forecast),
       );
@@ -139,7 +162,7 @@ final yearForecastProvider = Provider<Forecast>((ref) {
   return ref.watch(forecastCalculatorProvider).forYear(
         ref.watch(snapshotProvider),
         today.year,
-        _now(ref),
+        _liveNow(ref),
         currencyCode: ref.watch(currencyProvider).code,
         sourceIds: cardSources(ref, DashboardCardType.forecast),
       );

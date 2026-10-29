@@ -53,7 +53,9 @@ final monthHistoryProvider = Provider.autoDispose.family<MonthHistoryData, YearM
   final calc = ref.watch(earningsCalculatorProvider);
   final currency = ref.watch(currencyProvider).code;
   final today = ref.watch(todayProvider);
-  final nowMicros = ref.watch(clockProvider).now().microsecondsSinceEpoch;
+  // The current month (and its year to date) accrues live.
+  final nowMicros = (month == today.yearMonth ? ref.watch(liveNowProvider) : ref.watch(clockProvider).now())
+      .microsecondsSinceEpoch;
 
   final range = DateRange.month(month);
   final summary = calc.summarize(snap, range, nowMicros, currencyCode: currency);
@@ -92,6 +94,9 @@ final customRangeSummaryProvider = Provider.autoDispose.family<PeriodSummary, Da
   final snap = ref.watch(snapshotProvider);
   final calc = ref.watch(earningsCalculatorProvider);
   final currency = ref.watch(currencyProvider).code;
-  final nowMicros = ref.watch(clockProvider).now().microsecondsSinceEpoch;
+  // Live while the range includes today.
+  final nowMicros =
+      (range.contains(ref.watch(todayProvider)) ? ref.watch(liveNowProvider) : ref.watch(clockProvider).now())
+          .microsecondsSinceEpoch;
   return calc.summarize(snap, range, nowMicros, currencyCode: currency);
 });

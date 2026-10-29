@@ -16,7 +16,7 @@ import '../application/dashboard_providers.dart';
 /// Live "money earned so far". Recomputed from the authoritative rules each
 /// second (never incremented), so it is exact after suspension or restart.
 Fraction liveEarned(WidgetRef ref, CounterRange range, Set<String>? sources) {
-  final now = ref.watch(tickerProvider).value ?? ref.read(clockProvider).now();
+  final now = ref.watch(liveNowProvider);
   final cal = ref.watch(financialCalendarProvider);
   final today = cal.today(now);
   return ref.watch(earningsCalculatorProvider).liveTotal(

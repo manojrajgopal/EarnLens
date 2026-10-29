@@ -183,6 +183,15 @@ final tickerProvider = StreamProvider<DateTime>((ref) {
   return Stream<DateTime>.periodic(const Duration(seconds: 1), (_) => clock.now());
 });
 
+/// "Now" for live figures. Advances with [tickerProvider] every second and
+/// pauses with it when nothing visible is listening. Earnings computed from it
+/// are recalculated from the pay rules on each tick (never incremented), so
+/// they stay exact after suspension or restart.
+final liveNowProvider = Provider<DateTime>((ref) {
+  final clock = ref.watch(clockProvider);
+  return ref.watch(tickerProvider).value ?? clock.now();
+});
+
 /// Ticks every minute so date-dependent values roll over at midnight.
 final minuteTickerProvider = StreamProvider<int>((ref) =>
     Stream<int>.periodic(const Duration(minutes: 1), (i) => i));

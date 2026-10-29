@@ -486,8 +486,8 @@ class _ThisMonth extends ConsumerWidget {
     if (!snap.rules.containsKey(source.id)) return const SizedBox.shrink();
     final calc = ref.watch(earningsCalculatorProvider);
     final fmt = moneyFormatterFor(ref, source.currencyCode);
-    final today = currentDate(ref);
-    final sum = calc.summarizeSource(snap, source, DateRange.month(today.yearMonth), currentMicros(ref), today);
+    final (today, now) = liveNow(ref);
+    final sum = calc.summarizeSource(snap, source, DateRange.month(today.yearMonth), now, today);
     final c = context.colors;
 
     return FormSection(
@@ -604,8 +604,7 @@ class _MonthsList extends ConsumerWidget {
     if (!snap.rules.containsKey(s.id)) return const SizedBox.shrink();
     final calc = ref.watch(earningsCalculatorProvider);
     final fmt = moneyFormatterFor(ref, s.currencyCode);
-    final today = currentDate(ref);
-    final now = currentMicros(ref);
+    final (today, now) = liveNow(ref);
     final c = context.colors;
 
     final months = <(YearMonth, SourceSummary)>[];

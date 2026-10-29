@@ -423,12 +423,13 @@ abstract final class BlobShapes {
   /// Small chips, badges and avatars-in-cards.
   static BlobSpec chip(int seed) => BlobSpec(seed: seed, radius: 16, wobble: 0.35, wave: 1);
 
-  /// Floating navigation capsule with a raised centre swell for the orb.
-  static const nav = BlobSpec(radii: [34, 34, 36, 36], wave: 1.2, scaleWithSize: false, bumps: [
-    BlobBump(BlobEdge.top, 0.5, 20, spread: 0.12),
-    BlobBump(BlobEdge.top, 0.17, -3, spread: 0.12),
-    BlobBump(BlobEdge.top, 0.83, -3, spread: 0.12),
-    BlobBump(BlobEdge.bottom, 0.5, 3, spread: 0.3),
+  /// Floating navigation pill: near-capsule with soft, uneven contours that
+  /// leave room for the travelling selection orb.
+  static const nav = BlobSpec(radii: [36, 36, 36, 36], wave: 1.4, scaleWithSize: false, bumps: [
+    BlobBump(BlobEdge.top, 0.3, -2, spread: 0.18),
+    BlobBump(BlobEdge.top, 0.68, 2.5, spread: 0.2),
+    BlobBump(BlobEdge.bottom, 0.4, 2, spread: 0.25),
+    BlobBump(BlobEdge.bottom, 0.8, -1.5, spread: 0.18),
   ]);
 
   /// Bottom sheets: a gently rolling top edge, square bottom.

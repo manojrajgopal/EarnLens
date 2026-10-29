@@ -310,10 +310,10 @@ class _SourceTile extends ConsumerWidget {
     final snap = ref.watch(snapshotProvider);
     final calc = ref.watch(earningsCalculatorProvider);
     final fmt = moneyFormatterFor(ref, source.currencyCode);
-    final today = currentDate(ref);
+    final (today, now) = liveNow(ref);
     final s = source;
     final summary = snap.rules.containsKey(s.id)
-        ? calc.summarizeSource(snap, s, DateRange.month(today.yearMonth), currentMicros(ref), today)
+        ? calc.summarizeSource(snap, s, DateRange.month(today.yearMonth), now, today)
         : null;
 
     final String earnedLabel;

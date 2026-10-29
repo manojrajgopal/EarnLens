@@ -780,19 +780,29 @@ class SourcesCard extends ConsumerWidget {
             ),
           )
         else
-          SizedBox(
-            height: 152,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              // Clip so a second card never slides under Quick stats; the
-              // vertical padding leaves room for the glow shadow.
-              clipBehavior: Clip.hardEdge,
-              padding: const EdgeInsets.only(bottom: 20),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, i) => SizedBox(
-                width: items.length == 1 ? width : math.min(width * 0.92, 300),
-                child: _SourceBlob(item: items[i], money: money, index: i),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            // Clip so a second card never slides under Quick stats; the
+            // bottom padding leaves room for the glow shadow.
+            clipBehavior: Clip.hardEdge,
+            padding: const EdgeInsets.only(bottom: 20),
+            // Cards size to their content (large text never overflows) and
+            // share the tallest height.
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, item) in items.indexed) ...[
+                    if (i > 0) const SizedBox(width: 12),
+                    SizedBox(
+                      width: items.length == 1 ? width : math.min(width * 0.92, 300),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 132),
+                        child: _SourceBlob(item: item, money: money, index: i),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),

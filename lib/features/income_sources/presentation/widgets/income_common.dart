@@ -73,6 +73,13 @@ LocalDate currentDate(WidgetRef ref) => ref.read(financialCalendarProvider).toda
 
 int currentMicros(WidgetRef ref) => ref.read(clockProvider).now().microsecondsSinceEpoch;
 
+/// Live "now" for earned-so-far figures: watching it rebuilds the caller every
+/// second, so amounts keep accruing on screen without a refresh.
+(LocalDate, int) liveNow(WidgetRef ref) {
+  final now = ref.watch(liveNowProvider);
+  return (ref.read(financialCalendarProvider).today(now), now.microsecondsSinceEpoch);
+}
+
 /// Formatter for a specific currency (a source's own currency).
 MoneyFormatter moneyFormatterFor(WidgetRef ref, String currencyCode) {
   final locale = ref.watch(profileStreamProvider).value?.locale ?? 'en_IN';

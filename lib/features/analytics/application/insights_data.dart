@@ -156,7 +156,6 @@ final insightsProvider = Provider.autoDispose.family<InsightsData, InsightsQuery
   final forecasts = ref.watch(forecastCalculatorProvider);
   final currency = ref.watch(currencyProvider).code;
   final today = ref.watch(todayProvider);
-  final nowMicros = ref.watch(clockProvider).now().microsecondsSinceEpoch;
   final payments = ref.watch(expectedPaymentsProvider);
 
   final filterSources = snap.sources.where((s) => s.currencyCode == currency).toList()
@@ -166,6 +165,10 @@ final insightsProvider = Provider.autoDispose.family<InsightsData, InsightsQuery
   final current = today.yearMonth;
 
   final (last, count) = q.range.window(current);
+  // Figures that include the current month (and the forecasts, which always
+  // do) accrue live; a window of past months only is fixed.
+  final nowMicros = (last.isBefore(current) ? ref.watch(clockProvider).now() : ref.watch(liveNowProvider))
+      .microsecondsSinceEpoch;
   final series = calc.monthlySeries(snap, last, count, nowMicros, currencyCode: currency, sourceIds: ids);
 
   PeriodSummary month(YearMonth m) =>

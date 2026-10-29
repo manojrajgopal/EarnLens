@@ -207,8 +207,8 @@ void main() {
       await _settle(tester);
       expect(router.state.matchedLocation, '/home');
 
-      // The centre orb opens Insights.
-      await tester.tap(find.bySemanticsLabel('Insights').last);
+      // The Analytics destination opens Insights.
+      await tester.tap(find.bySemanticsLabel('Analytics').last);
       await _settle(tester);
       expect(router.state.matchedLocation, '/insights');
 
