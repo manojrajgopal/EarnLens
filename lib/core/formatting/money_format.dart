@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:intl/intl.dart';
 
 import '../../domain/money/currency.dart';
@@ -36,6 +38,19 @@ class MoneyFormatter {
     final frac = parts.length > 1 ? '.${parts[1]}' : '';
     final isZero = RegExp(r'^[0.]+$').hasMatch(body);
     return '${negative && !isZero ? '−' : ''}${currency.symbol}$whole$frac';
+  }
+
+  /// A small rate (per second, per minute…) with at least [decimals] places,
+  /// and more (up to 6) when needed to show two significant digits, so
+  /// ₹0.0039 per second never reads as ₹0.00.
+  String rate(Fraction minorUnits, {required int decimals}) {
+    final major = minorUnits.divInt(currency.minorPerMajor).toDouble().abs();
+    var places = decimals;
+    if (major > 0 && major < 1) {
+      final needed = (-math.log(major) / math.ln10).ceil() + 1;
+      places = math.max(places, math.min(needed, 6));
+    }
+    return fraction(minorUnits, decimals: places);
   }
 
   /// Signed variant used for variances: "+₹4,500.00" / "−₹200.00".

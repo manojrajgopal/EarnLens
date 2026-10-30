@@ -27,6 +27,74 @@ int _now(Ref ref) => ref.watch(clockProvider).now().microsecondsSinceEpoch;
 /// this so they update every second without a refresh.
 int _liveNow(Ref ref) => ref.watch(liveNowProvider).microsecondsSinceEpoch;
 
+/// Totals of every completed month, from the first month with income up to
+/// (not including) the current month. The lifetime card adds the live current
+/// month on top, so its figure always equals the sum of the monthly history.
+class LifetimeHistory {
+  const LifetimeHistory({
+    required this.earned,
+    required this.received,
+    required this.earnedThisYear,
+    required this.since,
+    required this.sourceCount,
+  });
+
+  static final empty =
+      LifetimeHistory(earned: Fraction.zero, received: 0, earnedThisYear: Fraction.zero, since: null, sourceCount: 0);
+
+  final Fraction earned;
+  final int received;
+
+  /// Completed months of the current year.
+  final Fraction earnedThisYear;
+
+  /// First day with income, or null when there is none.
+  final LocalDate? since;
+  final int sourceCount;
+}
+
+/// Recalculated when records, the month or the card's source filter change —
+/// not every second.
+final lifetimeHistoryProvider = Provider<LifetimeHistory>((ref) {
+  final snap = ref.watch(snapshotProvider);
+  final month = ref.watch(todayProvider.select((d) => d.yearMonth));
+  final currency = ref.watch(currencyProvider).code;
+  final only = cardSources(ref, DashboardCardType.lifetime);
+  final calc = ref.watch(earningsCalculatorProvider);
+  final sources = [
+    for (final s in snap.sources)
+      if (s.currencyCode == currency && (only == null || only.contains(s.id))) s,
+  ];
+  if (sources.isEmpty) return LifetimeHistory.empty;
+  // Earliest date anything was earned or paid for these sources.
+  var since = sources.map((s) => s.startDate).reduce((a, b) => a.isBefore(b) ? a : b);
+  for (final s in sources) {
+    for (final i in snap.itemsFor(s.id)) {
+      if (i.earnedDate != null && i.earnedDate!.isBefore(since)) since = i.earnedDate!;
+    }
+    for (final e in snap.ledgerFor(s.id)) {
+      if (e.periodMonth.firstDay.isBefore(since)) since = e.periodMonth.firstDay;
+    }
+  }
+  final now = _now(ref);
+  var earned = Fraction.zero;
+  var thisYear = Fraction.zero;
+  var received = 0;
+  for (var m = since.yearMonth; m.isBefore(month); m = m.next) {
+    final s = calc.summarize(snap, DateRange.month(m), now, currencyCode: currency, sourceIds: only);
+    earned += s.accrued;
+    received += s.received;
+    if (m.year == month.year) thisYear += s.accrued;
+  }
+  return LifetimeHistory(
+    earned: earned,
+    received: received,
+    earnedThisYear: thisYear,
+    since: since,
+    sourceCount: sources.length,
+  );
+});
+
 /// Current-month summary, updated live as earnings accrue.
 final monthSummaryProvider = Provider.family<PeriodSummary, DashboardCardType>((ref, type) {
   final today = ref.watch(todayProvider);

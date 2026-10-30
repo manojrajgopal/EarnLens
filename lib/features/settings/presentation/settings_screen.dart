@@ -175,7 +175,7 @@ class SettingsScreen extends ConsumerWidget {
           SettingsTile(
             icon: Icons.info_outline_rounded,
             title: 'About EarnLens',
-            subtitle: 'Version ${ref.watch(appVersionProvider)}',
+            subtitle: ref.watch(displayVersionProvider),
             onTap: () => go('about'),
           ),
         ]),

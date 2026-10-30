@@ -19,6 +19,7 @@ enum CounterRange {
 
 enum DashboardCardType {
   liveCounter,
+  lifetime,
   rates,
   monthToDate,
   today,
@@ -37,6 +38,7 @@ enum DashboardCardType {
 
   String get label => switch (this) {
         liveCounter => 'Live earnings counter',
+        lifetime => 'Lifetime earnings',
         rates => 'Earning rates',
         monthToDate => 'Month to date',
         today => "Today's earnings",
@@ -111,13 +113,15 @@ class DashboardConfig {
 
   factory DashboardConfig.defaults() => DashboardConfig(
         units: const [EarningUnit.second, EarningUnit.day, EarningUnit.month],
-        primaryUnit: EarningUnit.day,
+        // Per second is the main rate until the user picks another one.
+        primaryUnit: EarningUnit.second,
         cards: [
           for (final t in DashboardCardType.values)
             DashboardCardConfig(
               type: t,
               visible: const {
                 DashboardCardType.liveCounter,
+                DashboardCardType.lifetime,
                 DashboardCardType.rates,
                 DashboardCardType.expectedVsActual,
                 DashboardCardType.sources,
@@ -138,9 +142,15 @@ class DashboardConfig {
     final cards = [
       for (final c in (j['cards'] as List? ?? const [])) DashboardCardConfig.fromJson((c as Map).cast()),
     ];
-    // Append any card types added in newer versions.
+    // Card types added in newer versions: lifetime earnings (2.0.1) is shown
+    // right after the live counter; any others are appended hidden.
     for (final t in DashboardCardType.values) {
-      if (!cards.any((c) => c.type == t)) cards.add(DashboardCardConfig(type: t, visible: false));
+      if (cards.any((c) => c.type == t)) continue;
+      if (t == DashboardCardType.lifetime) {
+        cards.insert(cards.indexWhere((c) => c.type == DashboardCardType.liveCounter) + 1, DashboardCardConfig(type: t));
+      } else {
+        cards.add(DashboardCardConfig(type: t, visible: false));
+      }
     }
     final effectiveUnits = units.isEmpty ? d.units : units;
     final primary = enumByName(EarningUnit.values, j['primaryUnit'] as String?, d.primaryUnit);

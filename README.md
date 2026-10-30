@@ -28,7 +28,10 @@ account, no server, no tracking.
   - **Combined accounts** add up any two or more accounts live. They are read-only, never copy
     records, never mix currencies and never duplicate a combination.
   - Accounts are local data sets, not logins. See [docs/MULTI_ACCOUNTS.md](docs/MULTI_ACCOUNTS.md).
-- **Customisable dashboard** — 16 card types, reorder, resize, per-card source filters.
+- **Customisable dashboard**
+  - 17 card types, including **lifetime earnings** (everything earned to date, live).
+  - Reorder, resize, per-card source filters.
+  - Per second is the default main rate.
 - **Calendar, insights, forecasts & what-if** — trends, distribution, expected vs actual, MoM/YoY,
   month-end and year-end estimates, hypothetical hikes/extra income.
 - **Security** — PIN (salted PBKDF2, rate-limited), optional biometrics, auto-lock, privacy mode.

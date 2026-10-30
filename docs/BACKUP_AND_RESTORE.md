@@ -8,7 +8,7 @@ All of this works offline, without an account. Implementation: `lib/data/backup/
 ```json
 {
   "format": "earnlens-backup", "formatVersion": 1, "schemaVersion": 2,
-  "appVersion": "0.1.0+1", "createdAt": "2024-11-15T06:00:00.000Z",
+  "appVersion": "2.0.1+2", "createdAt": "2024-11-15T06:00:00.000Z",
   "counts": { "income_sources": 3, "ledger_entries": 42, "...": 0 },
   "sha256": "<hex digest of the payload JSON>",
   "payload": { "tables": { "<table>": [ { row }, ... ] } },

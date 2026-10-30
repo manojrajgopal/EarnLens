@@ -15,7 +15,7 @@ class AboutScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final version = ref.watch(appVersionProvider);
+    final version = ref.watch(displayVersionProvider);
     final c = context.colors;
     return SettingsPage(
       title: 'About',
@@ -43,7 +43,7 @@ class AboutScreen extends ConsumerWidget {
                   color: AppColors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
-                child: Text('Version $version', style: AppType.caption.copyWith(color: AppColors.white)),
+                child: Text('Version ${version.substring(1)}', style: AppType.caption.copyWith(color: AppColors.white)),
               ),
               const SizedBox(height: AppSpace.md),
               Text(

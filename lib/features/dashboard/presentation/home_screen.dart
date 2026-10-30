@@ -11,7 +11,6 @@ import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/earnlens_refresh_indicator.dart';
 import '../../../shared/widgets/form_fields.dart';
 import '../../../shared/widgets/organic.dart';
-import '../../accounts/application/account_summaries.dart';
 import '../../accounts/presentation/account_avatar.dart';
 import '../../accounts/presentation/account_switcher_sheet.dart';
 import '../../accounts/presentation/combined_dashboard.dart';
@@ -251,8 +250,6 @@ class _Header extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
-        const _AccountChip(),
-        const SizedBox(height: 8),
         FractionallySizedBox(
           widthFactor: 0.6,
           alignment: Alignment.centerLeft,
@@ -338,72 +335,6 @@ class _AccountButton extends ConsumerWidget {
           customBorder: const CircleBorder(),
           onTap: () => showAccountSwitcher(context),
           child: ExcludeSemantics(child: avatar),
-        ),
-      ),
-    );
-  }
-}
-
-/// "🙂 Personal ▾" — which account the dashboard shows. Combined accounts
-/// show their member avatars and a read-only marker.
-class _AccountChip extends ConsumerWidget {
-  const _AccountChip();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.colors;
-    final account = ref.watch(activeAccountProvider);
-    final combined = ref.watch(activeCombinedProvider);
-    if (account == null && combined == null) return const SizedBox.shrink();
-    final count = ref.watch(accountsProvider).length;
-    final members = combined == null ? const <Never>[] : ref.watch(combinedMembersProvider(combined.id));
-    final label = account?.name ?? combined!.name;
-    final detail = combined != null
-        ? '${members.length} accounts · read-only'
-        : count <= 1
-            ? 'Tap to add accounts'
-            // The type adds nothing when the account is named after it.
-            : (account!.type.label.toLowerCase() == account.name.trim().toLowerCase() ? '' : account.type.label);
-    return Semantics(
-      button: true,
-      label: 'Account: $label${detail.isEmpty ? '' : ', $detail'}. Switch account',
-      child: Material(
-        color: c.card.withValues(alpha: 0.86),
-        shape: const StadiumBorder(),
-        elevation: 0,
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: () => showAccountSwitcher(context),
-          child: ExcludeSemantics(
-            child: AnimatedSize(
-              duration: AppDurations.fast,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (combined != null)
-                    MemberStack(members: members, size: 26, max: 3)
-                  else
-                    AccountAvatar.of(account!, size: 26),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text.rich(
-                      TextSpan(children: [
-                        TextSpan(
-                          text: label,
-                          style: AppType.label.copyWith(fontWeight: FontWeight.w700, color: c.ink),
-                        ),
-                        if (detail.isNotEmpty)
-                          TextSpan(text: '  $detail', style: AppType.caption.copyWith(color: c.inkMuted)),
-                      ]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Icon(Icons.expand_more_rounded, size: 20, color: c.inkMuted),
-                ]),
-              ),
-            ),
-          ),
         ),
       ),
     );

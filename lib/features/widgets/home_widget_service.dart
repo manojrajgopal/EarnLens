@@ -64,7 +64,8 @@ class HomeWidgetService {
     await bridge.publish(WidgetPayload(
       title: accounts.length > 1 && viewName != null ? '$viewName · this month' : 'Earned this month',
       checkpoints: points,
-      rateText: '${money.fraction(rate, decimals: dash.primaryUnit.isSubDay ? dash.precision : 2)} ${dash.primaryUnit.shortLabel}',
+      rateText: '${dash.primaryUnit.isSubDay ? money.rate(rate, decimals: dash.precision) : money.fraction(rate)} '
+          '${dash.primaryUnit.shortLabel}',
       hidden: protected || ref.read(securitySettingsProvider).hideAmountsOnWidget,
       generatedAtMillis: now.millisecondsSinceEpoch,
     ));

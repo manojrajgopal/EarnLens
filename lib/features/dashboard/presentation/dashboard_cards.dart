@@ -27,6 +27,7 @@ import 'live_widgets.dart';
 /// Builds the widget for a dashboard card configuration.
 Widget buildDashboardCard(DashboardCardConfig c) => switch (c.type) {
   DashboardCardType.liveCounter => LiveCounterCard(config: c),
+  DashboardCardType.lifetime => LifetimeCard(config: c),
   DashboardCardType.rates => const RatesCard(),
   DashboardCardType.monthToDate => const MonthToDateCard(),
   DashboardCardType.today => TodayCard(config: c),
@@ -232,12 +233,14 @@ class RatesCard extends ConsumerWidget {
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerLeft,
                                     child: AmountText(
-                                      money.fraction(
-                                        rates[u]!,
-                                        decimals: u.isSubDay || u == EarningUnit.day
-                                            ? dash.precision
-                                            : (dash.compact ? 0 : 2),
-                                      ),
+                                      u.isSubDay
+                                          ? money.rate(rates[u]!, decimals: dash.precision)
+                                          : money.fraction(
+                                              rates[u]!,
+                                              decimals: u == EarningUnit.day
+                                                  ? dash.precision
+                                                  : (dash.compact ? 0 : 2),
+                                            ),
                                       style: AppType.amountMedium.copyWith(color: context.colors.ink, fontSize: 19),
                                     ),
                                   ),

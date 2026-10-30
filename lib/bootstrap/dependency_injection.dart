@@ -42,7 +42,11 @@ import '../features/widgets/home_widget_bridge.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) => throw UnimplementedError('Database not initialised'));
 final deviceTimezoneProvider = Provider<String>((ref) => 'Asia/Kolkata');
-final appVersionProvider = Provider<String>((ref) => '0.1.0');
+/// Full version with build number (e.g. `2.0.1+2`), recorded in backups.
+final appVersionProvider = Provider<String>((ref) => '2.0.1');
+
+/// The version as shown to people: `v2.0.1`.
+final displayVersionProvider = Provider<String>((ref) => 'v${ref.watch(appVersionProvider).split('+').first}');
 
 final clockProvider = Provider<Clock>((ref) => const SystemClock());
 final idProvider = Provider<IdGenerator>((ref) => const UuidGenerator());

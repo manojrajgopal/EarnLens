@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../bootstrap/dependency_injection.dart';
+import '../../../core/date_time/local_date.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../domain/models/settings.dart';
 import '../../../domain/money/fraction.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../shared/widgets/form_fields.dart';
 import '../../../shared/widgets/organic.dart';
 import '../application/dashboard_providers.dart';
 
@@ -90,7 +92,8 @@ class LiveCounterCard extends ConsumerWidget {
                 const Icon(Icons.bolt_rounded, size: 18, color: Color(0xFFFFC94D)),
                 const SizedBox(width: 6),
                 AmountText(
-                  '${money.fraction(rates[primary]!, decimals: primary.isSubDay ? dash.precision : 2)} ${primary.shortLabel}',
+                  '${primary.isSubDay ? money.rate(rates[primary]!, decimals: dash.precision) : money.fraction(rates[primary]!)} '
+                  '${primary.shortLabel}',
                   style: AppType.label.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: 14.5),
                 ),
               ]),
@@ -356,3 +359,125 @@ class TodayCard extends ConsumerWidget {
     );
   }
 }
+
+/// "Earned since you started": everything earned to date, ticking live.
+/// Completed months come from [lifetimeHistoryProvider]; the current month is
+/// recomputed from the pay rules every second, exactly as the hero counter.
+class LifetimeCard extends ConsumerWidget {
+  const LifetimeCard({super.key, required this.config});
+  final DashboardCardConfig config;
+
+  /// "2 yr 10 mo", "5 mo", "12 days".
+  static String _span(LocalDate since, LocalDate today) {
+    if (!since.isBefore(today)) return 'Today';
+    var months = (today.year - since.year) * 12 + today.month - since.month;
+    if (today.day < since.day) months--;
+    if (months < 1) {
+      final days = since.daysUntil(today);
+      return '$days ${days == 1 ? 'day' : 'days'}';
+    }
+    final years = months ~/ 12;
+    final rest = months % 12;
+    return [if (years > 0) '$years yr', if (rest > 0) '$rest mo'].join(' ');
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final money = ref.watch(moneyFormatterProvider);
+    final dash = ref.watch(dashboardConfigProvider);
+    final history = ref.watch(lifetimeHistoryProvider);
+    final today = ref.watch(todayProvider);
+    const fg = AppColors.white;
+    final muted = fg.withValues(alpha: 0.72);
+    final since = history.since;
+
+    Widget stat(String label, Widget value) => Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: AppType.caption.copyWith(color: muted)),
+            const SizedBox(height: 3),
+            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: value),
+          ]),
+        );
+    final statStyle = AppType.label.copyWith(color: fg, fontWeight: FontWeight.w700, fontSize: 15);
+
+    return EarnCard(
+      dark: true,
+      seed: 59,
+      semanticLabel: 'Lifetime earnings',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          BlobBadge(
+            size: 40,
+            seed: 5,
+            color: fg.withValues(alpha: 0.14),
+            child: const Icon(Icons.all_inclusive_rounded, color: Color(0xFFFFC94D), size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Lifetime earnings', style: AppType.label.copyWith(color: fg, fontWeight: FontWeight.w700)),
+              Text(
+                since == null ? 'Everything you have earned' : 'Since ${formatDate(since)}',
+                style: AppType.caption.copyWith(color: muted),
+              ),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 14),
+        if (since == null)
+          Text(
+            'Add an income source and your lifetime total starts counting here.',
+            style: AppType.bodySmall.copyWith(color: muted),
+          )
+        else ...[
+          Consumer(builder: (context, ref, _) {
+            final total = history.earned + liveEarned(ref, CounterRange.month, config.sourceIds);
+            return FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: AmountText(
+                money.fraction(total, decimals: dash.precision.clamp(2, 6)),
+                style: AppType.amountLarge.copyWith(
+                  color: fg,
+                  fontSize: 34,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+                semanticsLabel: 'Earned in total ${money.fraction(total)}',
+              ),
+            );
+          }),
+          const SizedBox(height: 4),
+          Text(
+            'Across ${history.sourceCount} income ${history.sourceCount == 1 ? 'source' : 'sources'}, '
+            'estimated from your pay rules and recorded income.',
+            style: AppType.caption.copyWith(color: muted),
+          ),
+          const SizedBox(height: 14),
+          Divider(height: 1, color: fg.withValues(alpha: 0.16)),
+          const SizedBox(height: 12),
+          Row(children: [
+            stat(
+              'This year',
+              Consumer(builder: (context, ref, _) {
+                final year = history.earnedThisYear + liveEarned(ref, CounterRange.month, config.sourceIds);
+                return AmountText(money.fraction(year, decimals: 0), style: statStyle);
+              }),
+            ),
+            const SizedBox(width: 12),
+            stat(
+              'Received',
+              AmountText(
+                money.minor(history.received + ref.watch(monthSummaryProvider(DashboardCardType.lifetime)).received,
+                    showMinor: false),
+                style: statStyle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            stat('Earning for', Text(_span(since, today), style: statStyle)),
+          ]),
+        ],
+      ]),
+    );
+  }
+}
+

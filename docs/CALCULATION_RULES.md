@@ -134,6 +134,26 @@ The default basis is *around the clock*, which matches the calendar-day live cou
 (test: *per-second matches the live counter within the day*). EarnLens never silently mixes a
 calendar-day salary with an assumed 8-hour day: the basis is an explicit, labelled setting.
 
+**Per second** is the default main rate for new accounts; the user can pick another. Sub-day
+rates are shown with at least the chosen number of decimals, and with more (up to six) when
+needed to show two significant digits. For example, ₹0.0039 per second never reads as ₹0.00.
+
+### 4.1 Lifetime earnings
+
+The *Lifetime earnings* card shows everything earned to date for the open account (or combined
+account), in its currency. It respects the card's source filter.
+
+`lifetime = Σ accrued(month)` for every **completed** month, from the month of the earliest
+source start, earned item or ledger period, plus the **current month's live total**. The current
+month is the same figure as the hero counter.
+
+- Each month is summarised exactly as in the monthly history, so the lifetime figure always equals
+  the sum of that history plus this month. This is covered by the test *completed months add up to
+  the monthly history*.
+- "Received" is the sum of payments received over the same months.
+- Completed months are recalculated only when records or the month change. Only the current month
+  ticks every second.
+
 ## 5. Variable income (business, freelance)
 
 For each source and month the app keeps, separately:

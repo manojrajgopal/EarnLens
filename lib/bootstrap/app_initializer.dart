@@ -45,7 +45,7 @@ Future<ProviderContainer> initializeApp() async {
     // Unknown zone name: fall back to the Indian-market default.
   }
 
-  var version = '0.1.0';
+  var version = '2.0.1';
   try {
     final info = await PackageInfo.fromPlatform();
     version = '${info.version}+${info.buildNumber}';

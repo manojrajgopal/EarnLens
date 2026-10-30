@@ -73,7 +73,7 @@ class RestoreResult {
 /// their records go into one "Personal" account whose id is derived from the
 /// backup, so restoring the same file twice never creates two accounts.
 class BackupService {
-  BackupService(this.db, this.clock, {this.kdfIterations = 210000, this.appVersion = '0.1.0'});
+  BackupService(this.db, this.clock, {this.kdfIterations = 210000, this.appVersion = '2.0.1'});
 
   static const format = 'earnlens-backup';
   static const formatVersion = 1;
