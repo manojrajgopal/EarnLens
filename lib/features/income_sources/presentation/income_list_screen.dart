@@ -11,6 +11,8 @@ import '../../../domain/models/income_source.dart';
 import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/income_visuals.dart';
 import '../../../shared/widgets/organic.dart';
+import '../../accounts/presentation/account_gate.dart';
+import '../../accounts/presentation/account_switcher_sheet.dart';
 import '../../refresh/application/app_refresher.dart';
 import 'widgets/income_common.dart';
 
@@ -32,6 +34,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
   Widget build(BuildContext context) {
     final snapAsync = ref.watch(snapshotStreamProvider);
     final sources = ref.watch(sourcesProvider);
+    final readOnly = ref.watch(isReadOnlyViewProvider);
     final mq = MediaQuery.paddingOf(context);
     final top = mq.top + AppSpace.md;
 
@@ -41,7 +44,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
     } else if (snapAsync.hasError && !snapAsync.hasValue) {
       body = ErrorState(
         message: 'Your income sources could not be loaded.',
-        onRetry: () => ref.invalidate(snapshotStreamProvider),
+        onRetry: () => ref.invalidate(scopedSnapshotProvider),
       );
     } else if (sources.isEmpty) {
       body = PageList(
@@ -51,15 +54,24 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
         children: [
           const PageHeadline(title: 'Your income', subtitle: 'Everything you earn, in one place.'),
           const SizedBox(height: AppSpace.xl),
-          EmptyState(
-            icon: Icons.account_balance_wallet_outlined,
-            title: 'Add your first income',
-            message:
-                'Add a salary, rent, freelance work or a one-off payment. '
-                'EarnLens then shows what you have earned so far, what is due and what has been paid.',
-            action: 'Add income',
-            onAction: () => showAddIncomeSheet(context),
-          ),
+          if (readOnly)
+            EmptyState(
+              icon: Icons.groups_2_outlined,
+              title: 'No income in these accounts yet',
+              message: 'Combined accounts are read-only. Open one of the member accounts to add income.',
+              action: 'Switch account',
+              onAction: () => showAccountSwitcher(context),
+            )
+          else
+            EmptyState(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Add your first income',
+              message:
+                  'Add a salary, rent, freelance work or a one-off payment. '
+                  'EarnLens then shows what you have earned so far, what is due and what has been paid.',
+              action: 'Add income',
+              onAction: () => showAddIncomeSheet(context),
+            ),
         ],
       );
     } else {
@@ -70,7 +82,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
         top: top,
         refreshEdgeOffset: mq.top,
         onRefresh: _refresh,
-        extraBottom: 72, // room for the floating "Add income" pill
+        extraBottom: readOnly ? 0 : 72, // room for the floating "Add income" pill
         children: [
           PageHeadline(
             title: 'Your income',
@@ -79,6 +91,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
                 'Tap a source for details, payments and history.',
           ),
           const SizedBox(height: AppSpace.lg),
+          const ReadOnlyBanner(),
           // One scrollable row of filters (wraps nothing, never overflows).
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -123,7 +136,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
       body: Stack(
         children: [
           Positioned.fill(child: body),
-          if (sources.isNotEmpty)
+          if (sources.isNotEmpty && !readOnly)
             Positioned(
               right: AppSpace.gutter + mq.right,
               bottom: mq.bottom + AppSpace.lg,
@@ -356,7 +369,12 @@ class _SourceTile extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${s.kind.label} · ${s.categoryLabel}',
+                      [
+                        s.kind.label,
+                        s.categoryLabel,
+                        // In a combined view, whose income this is.
+                        if (ref.watch(isReadOnlyViewProvider)) ?ref.watch(accountByIdProvider(s.accountId))?.name,
+                      ].join(' · '),
                       style: AppType.bodySmall.copyWith(color: c.inkMuted),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

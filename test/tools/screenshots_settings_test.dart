@@ -98,7 +98,8 @@ void main() {
       final db = memoryDatabase();
       final ids = SeqIds();
       await seedProfile(db);
-      await SampleDataService(LocalIncomeSourceRepository(db, clock, ids), LocalRecordsRepository(db, clock, ids), clock, ids)
+      await seedAccount(db);
+      await SampleDataService(LocalIncomeSourceRepository(db, clock, ids, testScope), LocalRecordsRepository(db, clock, ids, testScope), clock, ids)
           .insert(currencyCode: 'INR', today: d(2026, 10, 29));
       await tester.pumpWidget(testApp(db: db, store: InMemorySecureStore(), clock: clock));
       await precache(tester);

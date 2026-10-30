@@ -1,0 +1,115 @@
+-- Database-level guarantees for multi-account data (schema v2).
+-- They hold for every write path: repositories, CSV import and backup restore.
+
+import 'tables.dart';
+
+-- At most 10 individual accounts (combined accounts live in their own table
+-- and do not count).
+CREATE TRIGGER account_limit BEFORE INSERT ON accounts
+  WHEN (SELECT COUNT(*) FROM accounts) >= 10
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_LIMIT');
+END;
+
+-- A source never moves to another account.
+CREATE TRIGGER sources_owner_fixed BEFORE UPDATE OF account_id ON income_sources
+  WHEN NEW.account_id <> OLD.account_id
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+-- Child records must belong to the same account as their income source
+-- (and, for ledger entries, the same account as their bonus/benefit item).
+CREATE TRIGGER revisions_owner_insert BEFORE INSERT ON rate_revisions
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER revisions_owner_update BEFORE UPDATE OF account_id, source_id ON rate_revisions
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER pauses_owner_insert BEFORE INSERT ON source_pauses
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER pauses_owner_update BEFORE UPDATE OF account_id, source_id ON source_pauses
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER overrides_owner_insert BEFORE INSERT ON day_overrides
+  WHEN NEW.source_id IS NOT NULL
+    AND NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER overrides_owner_update BEFORE UPDATE OF account_id, source_id ON day_overrides
+  WHEN NEW.source_id IS NOT NULL
+    AND NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER items_owner_insert BEFORE INSERT ON compensation_items
+  WHEN NEW.source_id IS NOT NULL
+    AND NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER items_owner_update BEFORE UPDATE OF account_id, source_id ON compensation_items
+  WHEN NEW.source_id IS NOT NULL
+    AND NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER monthly_owner_insert BEFORE INSERT ON monthly_records
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER monthly_owner_update BEFORE UPDATE OF account_id, source_id ON monthly_records
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER ledger_owner_insert BEFORE INSERT ON ledger_entries
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+    OR (NEW.item_id IS NOT NULL
+        AND NEW.account_id IS NOT (SELECT account_id FROM compensation_items WHERE id = NEW.item_id))
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER ledger_owner_update BEFORE UPDATE OF account_id, source_id, item_id ON ledger_entries
+  WHEN NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+    OR (NEW.item_id IS NOT NULL
+        AND NEW.account_id IS NOT (SELECT account_id FROM compensation_items WHERE id = NEW.item_id))
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER events_owner_insert BEFORE INSERT ON calendar_events
+  WHEN NEW.source_id IS NOT NULL
+    AND NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;
+
+CREATE TRIGGER events_owner_update BEFORE UPDATE OF account_id, source_id ON calendar_events
+  WHEN NEW.source_id IS NOT NULL
+    AND NEW.account_id IS NOT (SELECT account_id FROM income_sources WHERE id = NEW.source_id)
+BEGIN
+  SELECT RAISE(ABORT, 'EARNLENS_ACCOUNT_MISMATCH');
+END;

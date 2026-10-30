@@ -11,6 +11,10 @@ import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/earnlens_refresh_indicator.dart';
 import '../../../shared/widgets/form_fields.dart';
 import '../../../shared/widgets/organic.dart';
+import '../../accounts/application/account_summaries.dart';
+import '../../accounts/presentation/account_avatar.dart';
+import '../../accounts/presentation/account_switcher_sheet.dart';
+import '../../accounts/presentation/combined_dashboard.dart';
 import '../../authentication/application/session_controller.dart';
 import '../../refresh/application/app_refresher.dart';
 import '../application/dashboard_providers.dart';
@@ -27,6 +31,7 @@ class HomeScreen extends ConsumerWidget {
     final config = ref.watch(dashboardConfigProvider);
     final snapAsync = ref.watch(snapshotStreamProvider);
     final visible = config.cards.where((x) => x.visible).toList();
+    final combined = ref.watch(isReadOnlyViewProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -119,10 +124,41 @@ class HomeScreen extends ConsumerWidget {
                     child: const EntranceScale(delay: Duration(milliseconds: 60), child: QuickActions()),
                   ),
                 );
+                if (combined) {
+                  cards.add(
+                    SizedBox(
+                      width: columns == 1 ? contentWidth : colWidth,
+                      child: const EntranceScale(delay: Duration(milliseconds: 90), child: CombinedMembersCard()),
+                    ),
+                  );
+                }
               }
+            }
+            // Without a live counter the members card still leads.
+            if (combined && !visible.any((x) => x.type == DashboardCardType.liveCounter)) {
+              cards.insert(0, SizedBox(width: contentWidth, child: const CombinedMembersCard()));
             }
             content = Wrap(spacing: gap, runSpacing: 24, children: cards);
           }
+          // Cross-fade when switching accounts; the new account's data is
+          // already loaded, so this never shows the previous account's figures.
+          content = AnimatedSwitcher(
+            duration: MediaQuery.disableAnimationsOf(context) ? Duration.zero : AppDurations.medium,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, 0.02), end: Offset.zero).animate(animation),
+                child: child,
+              ),
+            ),
+            layoutBuilder: (current, previous) => Stack(
+              alignment: Alignment.topCenter,
+              children: [...previous.map((p) => Positioned(top: 0, left: 0, right: 0, child: p)), ?current],
+            ),
+            child: KeyedSubtree(key: ValueKey(ref.watch(activeViewProvider)), child: content),
+          );
 
           return EarnLensRefreshIndicator(
             edgeOffset: MediaQuery.paddingOf(context).top,
@@ -215,6 +251,8 @@ class _Header extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
+        const _AccountChip(),
+        const SizedBox(height: 8),
         FractionallySizedBox(
           widthFactor: 0.6,
           alignment: Alignment.centerLeft,
@@ -271,8 +309,103 @@ class _Header extends ConsumerWidget {
               ),
           ],
         ),
-        _Avatar(name: name),
+        const _AccountButton(),
       ],
+    );
+  }
+}
+
+/// The open account's avatar; opens the account switcher.
+class _AccountButton extends ConsumerWidget {
+  const _AccountButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final account = ref.watch(activeAccountProvider);
+    final combined = ref.watch(activeCombinedProvider);
+    final name = account?.name ?? combined?.name;
+    final avatar = account != null
+        ? AccountAvatar.of(account, size: 48, ring: true)
+        : combined != null
+            ? AccountAvatar.combined(combined, size: 48, ring: true)
+            : _Avatar(name: ref.watch(profileStreamProvider).value?.displayName ?? '');
+    return Tooltip(
+      message: 'Switch account',
+      child: Semantics(
+        button: true,
+        label: name == null ? 'Switch account' : 'Switch account. Open: $name',
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => showAccountSwitcher(context),
+          child: ExcludeSemantics(child: avatar),
+        ),
+      ),
+    );
+  }
+}
+
+/// "🙂 Personal ▾" — which account the dashboard shows. Combined accounts
+/// show their member avatars and a read-only marker.
+class _AccountChip extends ConsumerWidget {
+  const _AccountChip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final account = ref.watch(activeAccountProvider);
+    final combined = ref.watch(activeCombinedProvider);
+    if (account == null && combined == null) return const SizedBox.shrink();
+    final count = ref.watch(accountsProvider).length;
+    final members = combined == null ? const <Never>[] : ref.watch(combinedMembersProvider(combined.id));
+    final label = account?.name ?? combined!.name;
+    final detail = combined != null
+        ? '${members.length} accounts · read-only'
+        : count <= 1
+            ? 'Tap to add accounts'
+            // The type adds nothing when the account is named after it.
+            : (account!.type.label.toLowerCase() == account.name.trim().toLowerCase() ? '' : account.type.label);
+    return Semantics(
+      button: true,
+      label: 'Account: $label${detail.isEmpty ? '' : ', $detail'}. Switch account',
+      child: Material(
+        color: c.card.withValues(alpha: 0.86),
+        shape: const StadiumBorder(),
+        elevation: 0,
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: () => showAccountSwitcher(context),
+          child: ExcludeSemantics(
+            child: AnimatedSize(
+              duration: AppDurations.fast,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (combined != null)
+                    MemberStack(members: members, size: 26, max: 3)
+                  else
+                    AccountAvatar.of(account!, size: 26),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(
+                          text: label,
+                          style: AppType.label.copyWith(fontWeight: FontWeight.w700, color: c.ink),
+                        ),
+                        if (detail.isNotEmpty)
+                          TextSpan(text: '  $detail', style: AppType.caption.copyWith(color: c.inkMuted)),
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Icon(Icons.expand_more_rounded, size: 20, color: c.inkMuted),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -327,23 +460,45 @@ class QuickActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(todayProvider).yearMonth;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    // A combined account is read-only: its first two actions switch accounts
+    // and open the member breakdown instead of adding records.
+    final combined = ref.watch(activeCombinedProvider);
     final actions = [
-      (
-        Icons.add_rounded,
-        'Add income',
-        'Log your earnings',
-        AppColors.violet,
-        AppColors.lilacSoft,
-        () => context.go('/income'),
-      ),
-      (
-        Icons.north_east_rounded,
-        'Record payment',
-        'Track received pay',
-        AppColors.peach,
-        AppColors.peachSoft,
-        () => recordPaymentFlow(context, ref),
-      ),
+      if (combined == null) ...[
+        (
+          Icons.add_rounded,
+          'Add income',
+          'Log your earnings',
+          AppColors.violet,
+          AppColors.lilacSoft,
+          () => context.go('/income'),
+        ),
+        (
+          Icons.north_east_rounded,
+          'Record payment',
+          'Track received pay',
+          AppColors.peach,
+          AppColors.peachSoft,
+          () => recordPaymentFlow(context, ref),
+        ),
+      ] else ...[
+        (
+          Icons.swap_horiz_rounded,
+          'Accounts',
+          'Switch or edit',
+          AppColors.violet,
+          AppColors.lilacSoft,
+          () => showAccountSwitcher(context),
+        ),
+        (
+          Icons.groups_2_outlined,
+          'Members',
+          'Add or remove',
+          AppColors.peach,
+          AppColors.peachSoft,
+          () => context.push('/settings/accounts/combined/${combined.id}'),
+        ),
+      ],
       (
         Icons.bar_chart_rounded,
         'Month review',

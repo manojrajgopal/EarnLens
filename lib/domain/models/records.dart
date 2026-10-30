@@ -8,6 +8,7 @@ import 'enums.dart';
 class CompensationItem {
   const CompensationItem({
     required this.id,
+    this.accountId = '',
     required this.type,
     required this.title,
     required this.currencyCode,
@@ -28,6 +29,10 @@ class CompensationItem {
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
   final String? sourceId;
   final CompensationType type;
   final String title;
@@ -61,6 +66,7 @@ class CompensationItem {
 class MonthlyRecord {
   const MonthlyRecord({
     required this.id,
+    this.accountId = '',
     required this.sourceId,
     required this.month,
     required this.updatedAt,
@@ -73,6 +79,10 @@ class MonthlyRecord {
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
   final String sourceId;
   final YearMonth month;
   final int? originalEstimateMinor;
@@ -92,6 +102,7 @@ class MonthlyRecord {
 class LedgerEntry {
   const LedgerEntry({
     required this.id,
+    this.accountId = '',
     required this.sourceId,
     required this.type,
     required this.amountMinor,
@@ -107,6 +118,10 @@ class LedgerEntry {
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
   final String sourceId;
   final String? itemId;
   final LedgerType type;
@@ -132,6 +147,7 @@ class LedgerEntry {
 class CalendarEvent {
   const CalendarEvent({
     required this.id,
+    this.accountId = '',
     required this.title,
     required this.date,
     required this.type,
@@ -144,6 +160,10 @@ class CalendarEvent {
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
   final String title;
   final LocalDate date;
   final CalendarEventType type;
@@ -158,6 +178,7 @@ class CalendarEvent {
 class AuditEntry {
   const AuditEntry({
     required this.id,
+    this.accountId,
     required this.entityType,
     required this.entityId,
     required this.action,
@@ -168,6 +189,7 @@ class AuditEntry {
   });
 
   final String id;
+  final String? accountId;
   final String entityType;
   final String entityId;
   final String action;

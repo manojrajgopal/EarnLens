@@ -12,6 +12,10 @@ import 'home_widget_bridge.dart';
 /// Android), so instead of claiming per-second updates the app stores a value
 /// for every 30-minute checkpoint over the next 24 hours; the widget displays
 /// the latest checkpoint with its time.
+///
+/// The widget shows the open account (or combined account). Nothing is
+/// published while that account's data is loading or PIN-locked, and amounts
+/// are hidden whenever a PIN-protected account is part of the view.
 class HomeWidgetService {
   HomeWidgetService(this.ref);
   final Ref ref;
@@ -31,6 +35,13 @@ class HomeWidgetService {
     final bridge = ref.read(homeWidgetBridgeProvider);
     if (!bridge.isSupported) return;
     if (ref.read(profileStreamProvider).value?.onboardingComplete != true) return;
+    // Never publish an empty or another account's snapshot.
+    if (ref.read(accountScopeProvider).visibleAccountIds.isEmpty) return;
+    if (!ref.read(snapshotStreamProvider).hasValue) return;
+    final accounts = ref.read(accountsProvider);
+    final viewIds = ref.read(viewAccountIdsProvider);
+    final protected = accounts.any((a) => viewIds.contains(a.id) && a.requiresPin);
+    final viewName = ref.read(activeAccountProvider)?.name ?? ref.read(activeCombinedProvider)?.name;
     final now = ref.read(clockProvider).now();
     final calendar = ref.read(financialCalendarProvider);
     final calc = ref.read(earningsCalculatorProvider);
@@ -51,10 +62,10 @@ class HomeWidgetService {
     }
     final rate = calc.combinedRate(snap, dash.primaryUnit, today, currencyCode: currency, basis: dash.rateBasis);
     await bridge.publish(WidgetPayload(
-      title: 'Earned this month',
+      title: accounts.length > 1 && viewName != null ? '$viewName · this month' : 'Earned this month',
       checkpoints: points,
       rateText: '${money.fraction(rate, decimals: dash.primaryUnit.isSubDay ? dash.precision : 2)} ${dash.primaryUnit.shortLabel}',
-      hidden: ref.read(securitySettingsProvider).hideAmountsOnWidget,
+      hidden: protected || ref.read(securitySettingsProvider).hideAmountsOnWidget,
       generatedAtMillis: now.millisecondsSinceEpoch,
     ));
   }
@@ -69,6 +80,8 @@ final homeWidgetServiceProvider = Provider<HomeWidgetService>((ref) {
 final homeWidgetSyncProvider = Provider<void>((ref) {
   final s = ref.watch(homeWidgetServiceProvider);
   ref.listen(snapshotProvider, (_, _) => s.requestPublish());
+  ref.listen(activeViewProvider, (_, _) => s.requestPublish());
+  ref.listen(accountsProvider, (_, _) => s.requestPublish());
   ref.listen(dashboardConfigProvider, (_, _) => s.requestPublish());
   ref.listen(securitySettingsProvider, (_, _) => s.requestPublish());
   ref.listen(profileStreamProvider, (_, _) => s.requestPublish());

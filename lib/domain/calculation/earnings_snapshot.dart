@@ -4,13 +4,14 @@ import '../models/income_source.dart';
 import '../models/records.dart';
 import 'source_rules.dart';
 
-/// Immutable view of all persisted financial data used by the calculators.
+/// Immutable view of the persisted financial data of one or more accounts,
+/// used by the calculators.
 class EarningsSnapshot {
   EarningsSnapshot({
     required List<IncomeSource> sources,
-    required List<RateRevision> revisions,
-    List<SourcePause> pauses = const [],
-    List<DayOverride> overrides = const [],
+    required this.revisions,
+    this.pauses = const [],
+    this.overrides = const [],
     this.items = const [],
     this.monthlyRecords = const [],
     this.ledger = const [],
@@ -27,6 +28,9 @@ class EarningsSnapshot {
   static final empty = EarningsSnapshot(sources: const [], revisions: const []);
 
   final List<IncomeSource> sources;
+  final List<RateRevision> revisions;
+  final List<SourcePause> pauses;
+  final List<DayOverride> overrides;
   final Map<String, SourceRules> rules;
   final List<CompensationItem> items;
   final List<MonthlyRecord> monthlyRecords;
@@ -34,6 +38,25 @@ class EarningsSnapshot {
   final Map<String, MonthlyRecord> _records = {};
 
   IncomeSource? source(String id) => rules[id]?.source;
+
+  /// Accounts that own at least one source in this snapshot.
+  Set<String> get accountIds => {for (final s in sources) s.accountId};
+
+  /// Only the records owned by [accountIds]. Used for the member-wise
+  /// breakdown of a combined account: the same records, filtered, never
+  /// copied into the database.
+  EarningsSnapshot subset(Set<String> accountIds) {
+    bool keep(String accountId) => accountIds.contains(accountId);
+    return EarningsSnapshot(
+      sources: sources.where((s) => keep(s.accountId)).toList(),
+      revisions: revisions.where((r) => keep(r.accountId)).toList(),
+      pauses: pauses.where((p) => keep(p.accountId)).toList(),
+      overrides: overrides.where((o) => keep(o.accountId)).toList(),
+      items: items.where((i) => keep(i.accountId)).toList(),
+      monthlyRecords: monthlyRecords.where((r) => keep(r.accountId)).toList(),
+      ledger: ledger.where((e) => keep(e.accountId)).toList(),
+    );
+  }
 
   MonthlyRecord? record(String sourceId, YearMonth m) => _records['$sourceId|${m.toIso()}'];
 

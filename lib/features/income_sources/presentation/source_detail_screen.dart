@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../domain/models/account.dart';
+import '../../accounts/presentation/account_gate.dart';
+import '../../accounts/presentation/account_switcher_sheet.dart';
 import '../../../bootstrap/dependency_injection.dart';
 import '../../../core/date_time/local_date.dart';
 import '../../../core/errors/app_exception.dart';
@@ -35,18 +38,31 @@ class SourceDetailScreen extends ConsumerWidget {
     final s = source;
     final ruleBased = s.kind.accruesContinuously && !s.usesFixedTotal;
     final hasRates = s.kind != IncomeKind.oneTime && !s.usesFixedTotal;
+    // In a combined view the source is shown read-only, with a way to open
+    // the account it belongs to.
+    final readOnly = ref.watch(isReadOnlyViewProvider);
+    final owner = ref.watch(accountByIdProvider(s.accountId));
 
     return Scaffold(
       appBar: AppBar(
         title: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        actions: [
-          IconButton(
-            tooltip: 'Edit',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.push('/income/${s.id}/edit'),
-          ),
-          _SourceMenu(source: s),
-        ],
+        actions: readOnly
+            ? [
+                if (owner != null)
+                  TextButton.icon(
+                    onPressed: () => openAccountView(context, ref, IndividualView(owner.id)),
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    label: Text('Open ${owner.name}'),
+                  ),
+              ]
+            : [
+                IconButton(
+                  tooltip: 'Edit',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => context.push('/income/${s.id}/edit'),
+                ),
+                _SourceMenu(source: s),
+              ],
       ),
       body: PageList(
         onRefresh: () => ref.read(appRefresherProvider).refresh({
@@ -55,6 +71,8 @@ class SourceDetailScreen extends ConsumerWidget {
           RefreshScope.audit,
         }),
         children: [
+          if (readOnly && owner != null)
+            ReadOnlyBanner(message: "This is ${owner.name}'s income, shown read-only. Open ${owner.name} to change it."),
           EntranceScale(child: _HeroCard(source: s)),
           _ThisMonth(source: s),
           _MonthsList(source: s),

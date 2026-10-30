@@ -44,8 +44,9 @@ class AppRefresher {
 
     // Re-read authoritative records; previous values stay on screen until the
     // new snapshot arrives (no flicker), and all summaries recompute from it.
-    _ref.invalidate(snapshotStreamProvider);
-    await _ref.read(snapshotStreamProvider.future);
+    final scope = _ref.read(accountScopeProvider);
+    _ref.invalidate(scopedSnapshotProvider(scope));
+    if (scope.visibleAccountIds.isNotEmpty) await _ref.read(scopedSnapshotProvider(scope).future);
     if (scopes.contains(RefreshScope.calendar)) await _ref.read(calendarEventsProvider.future);
 
     _ref.read(notificationServiceProvider).requestSync();

@@ -21,6 +21,13 @@ account, no server, no tracking.
   benefits, allowances and reimbursements.
 - **Transactions** — payments received, deductions, reversals, adjustments; duplicate protection;
   expected-payment statuses (upcoming, due, overdue, partial, received).
+- **Multiple accounts**
+  - Up to 10 accounts (Personal, Family, Business, Freelance…), each with its own income,
+    payments, history, dashboard, reminders, currency and optional PIN.
+  - Switching is instant from the dashboard.
+  - **Combined accounts** add up any two or more accounts live. They are read-only, never copy
+    records, never mix currencies and never duplicate a combination.
+  - Accounts are local data sets, not logins. See [docs/MULTI_ACCOUNTS.md](docs/MULTI_ACCOUNTS.md).
 - **Customisable dashboard** — 16 card types, reorder, resize, per-card source filters.
 - **Calendar, insights, forecasts & what-if** — trends, distribution, expected vs actual, MoM/YoY,
   month-end and year-end estimates, hypothetical hikes/extra income.
@@ -103,6 +110,7 @@ drift_schemas/      versioned schema snapshots for migration tests
 | Architecture & extension points | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Design system, safe areas, navigation, pull-to-refresh, app icon | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
 | Every formula, with examples | [docs/CALCULATION_RULES.md](docs/CALCULATION_RULES.md) |
+| Accounts, combined accounts, isolation & account PINs | [docs/MULTI_ACCOUNTS.md](docs/MULTI_ACCOUNTS.md) |
 | Database schema & migrations | [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) |
 | Security & privacy | [docs/SECURITY.md](docs/SECURITY.md) |
 | Backup, restore, CSV | [docs/BACKUP_AND_RESTORE.md](docs/BACKUP_AND_RESTORE.md) |

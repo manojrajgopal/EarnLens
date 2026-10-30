@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/accounts/presentation/account_gate.dart';
 import '../../shared/layout/page_layout.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
@@ -48,7 +49,7 @@ class AppShell extends StatelessWidget {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _go(0);
       },
-      child: EarnBackdrop(child: shell),
+      child: EarnBackdrop(child: AccountGate(child: shell)),
     );
 
     if (wide) {

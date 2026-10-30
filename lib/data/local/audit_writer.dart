@@ -18,11 +18,13 @@ class AuditWriter {
     required String entityId,
     required String action,
     required String summary,
+    String? accountId,
     Map<String, dynamic>? before,
     Map<String, dynamic>? after,
   }) =>
       db.into(db.auditLog).insert(AuditRow(
             id: ids.newId(),
+            accountId: accountId,
             entityType: entityType,
             entityId: entityId,
             action: action,

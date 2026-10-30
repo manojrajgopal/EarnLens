@@ -5,6 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../bootstrap/dependency_injection.dart';
 import '../../core/date_time/local_date.dart';
 import '../../domain/models/enums.dart';
+import '../../features/accounts/presentation/account_details_screen.dart';
+import '../../features/accounts/presentation/account_form_screen.dart';
+import '../../features/accounts/presentation/account_gate.dart';
+import '../../features/accounts/presentation/combined_dashboard.dart';
+import '../../features/accounts/presentation/combined_form_screen.dart';
+import '../../features/accounts/presentation/delete_account_screen.dart';
+import '../../features/accounts/presentation/manage_accounts_screen.dart';
 import '../../features/analytics/presentation/insights_screen.dart';
 import '../../features/authentication/application/session_controller.dart';
 import '../../features/authentication/presentation/change_pin_screen.dart';
@@ -94,6 +101,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   builder: (_, s) => SearchScreen(initialQuery: s.uri.queryParameters['q'] ?? ''),
                 ),
                 GoRoute(path: 'reminders', builder: (_, _) => const RemindersScreen()),
+                GoRoute(
+                  path: 'member/:accountId',
+                  builder: (_, s) => MemberBreakdownScreen(accountId: s.pathParameters['accountId']!),
+                ),
               ],
             ),
           ]),
@@ -106,45 +117,65 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: 'new',
                   // Keyed by URL so opening "new income" with a different kind
                   // builds a fresh form instead of reusing the previous state.
-                  builder: (_, s) => SourceFormScreen(
-                    key: ValueKey(s.uri.toString()),
-                    kind: IncomeKind.values.where((k) => k.name == s.uri.queryParameters['kind']).firstOrNull,
+                  builder: (_, s) => ReadOnlyGuard(
+                    child: SourceFormScreen(
+                      key: ValueKey(s.uri.toString()),
+                      kind: IncomeKind.values.where((k) => k.name == s.uri.queryParameters['kind']).firstOrNull,
+                    ),
                   ),
                 ),
                 GoRoute(
                   path: ':id',
                   builder: (_, s) => SourceDetailScreen(sourceId: s.pathParameters['id']!),
                   routes: [
-                    GoRoute(path: 'edit', builder: (_, s) => SourceFormScreen(sourceId: s.pathParameters['id'])),
+                    GoRoute(
+                      path: 'edit',
+                      builder: (_, s) => ReadOnlyGuard(
+                        sourceId: s.pathParameters['id'],
+                        child: SourceFormScreen(sourceId: s.pathParameters['id']),
+                      ),
+                    ),
                     GoRoute(
                       path: 'revision',
-                      builder: (_, s) => RevisionFormScreen(
-                        sourceId: s.pathParameters['id']!,
-                        revisionId: s.uri.queryParameters['rev'],
+                      builder: (_, s) => ReadOnlyGuard(
+                        sourceId: s.pathParameters['id'],
+                        child: RevisionFormScreen(
+                          sourceId: s.pathParameters['id']!,
+                          revisionId: s.uri.queryParameters['rev'],
+                        ),
                       ),
                     ),
                     GoRoute(
                       path: 'item',
-                      builder: (_, s) => ItemFormScreen(
-                        sourceId: s.pathParameters['id']!,
-                        itemId: s.uri.queryParameters['item'],
+                      builder: (_, s) => ReadOnlyGuard(
+                        sourceId: s.pathParameters['id'],
+                        child: ItemFormScreen(
+                          sourceId: s.pathParameters['id']!,
+                          itemId: s.uri.queryParameters['item'],
+                        ),
                       ),
                     ),
                     GoRoute(
                       path: 'entry',
-                      builder: (_, s) => LedgerEntryFormScreen(
-                        sourceId: s.pathParameters['id']!,
-                        entryId: s.uri.queryParameters['entry'],
-                        type: LedgerType.values.where((t) => t.name == s.uri.queryParameters['type']).firstOrNull,
-                        period: ym(s.uri.queryParameters['period']),
-                        itemId: s.uri.queryParameters['item'],
+                      builder: (_, s) => ReadOnlyGuard(
+                        sourceId: s.pathParameters['id'],
+                        child: LedgerEntryFormScreen(
+                          sourceId: s.pathParameters['id']!,
+                          entryId: s.uri.queryParameters['entry'],
+                          type: LedgerType.values.where((t) => t.name == s.uri.queryParameters['type']).firstOrNull,
+                          period: ym(s.uri.queryParameters['period']),
+                          itemId: s.uri.queryParameters['item'],
+                        ),
                       ),
                     ),
                     GoRoute(
                       path: 'month/:ym',
-                      builder: (_, s) => MonthRecordScreen(
-                        sourceId: s.pathParameters['id']!,
-                        month: ym(s.pathParameters['ym']) ?? YearMonth(2000, 1),
+                      builder: (_, s) => ReadOnlyGuard(
+                        sourceId: s.pathParameters['id'],
+                        child: MonthRecordScreen(
+                          sourceId: s.pathParameters['id']!,
+                          month: ym(s.pathParameters['ym']) ?? YearMonth(2000, 1),
+                        ),
                       ),
                     ),
                   ],
@@ -174,10 +205,51 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const SettingsScreen(),
               routes: [
                 GoRoute(path: 'profile', builder: (_, _) => const ProfileSettingsScreen()),
+                GoRoute(
+                  path: 'accounts',
+                  builder: (_, _) => const ManageAccountsScreen(),
+                  routes: [
+                    GoRoute(path: 'new', builder: (_, _) => const AccountFormScreen()),
+                    GoRoute(
+                      path: 'combined/new',
+                      builder: (_, _) => const CombinedFormScreen(),
+                    ),
+                    GoRoute(
+                      path: 'combined/:cid',
+                      builder: (_, s) => CombinedFormScreen(
+                        key: ValueKey(s.pathParameters['cid']),
+                        combinedId: s.pathParameters['cid'],
+                      ),
+                      routes: [
+                        GoRoute(
+                          path: 'members',
+                          builder: (_, s) => CombinedMembersScreen(combinedId: s.pathParameters['cid']!),
+                        ),
+                      ],
+                    ),
+                    GoRoute(
+                      path: ':id',
+                      builder: (_, s) => AccountDetailsScreen(accountId: s.pathParameters['id']!),
+                      routes: [
+                        GoRoute(
+                          path: 'edit',
+                          builder: (_, s) => AccountFormScreen(
+                            key: ValueKey(s.pathParameters['id']),
+                            accountId: s.pathParameters['id'],
+                          ),
+                        ),
+                        GoRoute(
+                          path: 'delete',
+                          builder: (_, s) => DeleteAccountScreen(accountId: s.pathParameters['id']!),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
                 GoRoute(path: 'appearance', builder: (_, _) => const AppearanceSettingsScreen()),
                 GoRoute(path: 'dashboard', builder: (_, _) => const DashboardCustomizeScreen()),
                 GoRoute(path: 'calculation', builder: (_, _) => const CalculationSettingsScreen()),
-                GoRoute(path: 'holidays', builder: (_, _) => const DayOverridesScreen()),
+                GoRoute(path: 'holidays', builder: (_, _) => const ReadOnlyGuard(child: DayOverridesScreen())),
                 GoRoute(path: 'notifications', builder: (_, _) => const NotificationSettingsScreen()),
                 GoRoute(
                   path: 'security',

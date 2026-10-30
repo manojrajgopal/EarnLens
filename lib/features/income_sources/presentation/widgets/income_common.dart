@@ -455,7 +455,7 @@ class MissingSourceScaffold extends ConsumerWidget {
       body: snap.isLoading && !snap.hasValue
           ? const LoadingState()
           : snap.hasError && !snap.hasValue
-          ? ErrorState(message: 'Your data could not be loaded.', onRetry: () => ref.invalidate(snapshotStreamProvider))
+          ? ErrorState(message: 'Your data could not be loaded.', onRetry: () => ref.invalidate(scopedSnapshotProvider))
           : const Center(
               child: EmptyState(
                 icon: Icons.search_off_rounded,

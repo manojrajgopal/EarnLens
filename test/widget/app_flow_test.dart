@@ -63,9 +63,10 @@ void main() {
       createdAt: clock.now(),
       updatedAt: clock.now(),
     ));
+    await seedAccount(db);
     if (withSalary) {
       final s = source(id: 'sal', start: d(2024, 1, 1));
-      await LocalIncomeSourceRepository(db, clock, SeqIds())
+      await LocalIncomeSourceRepository(db, clock, SeqIds(), testScope)
           .createSource(s, initialRate: rev('sal', s.startDate, 3100000));
     }
   }
@@ -170,7 +171,7 @@ void main() {
     await phone(tester);
     await seedProfile();
     await LocalSettingsRepository(db, clock).write(
-      'dashboard',
+      'dashboard@$testAccountId',
       DashboardConfig.defaults().copyWith(units: [EarningUnit.day], primaryUnit: EarningUnit.day).toJson(),
     );
     await tester.pumpWidget(testApp(db: db, store: store, clock: clock));
@@ -181,12 +182,12 @@ void main() {
     // Try to remove the only unit.
     await tester.tap(find.widgetWithText(FilterChip, 'Per day'));
     await settle(tester, 5);
-    var saved = DashboardConfig.fromJson((await LocalSettingsRepository(db, clock).read('dashboard'))!);
+    var saved = DashboardConfig.fromJson((await LocalSettingsRepository(db, clock).read('dashboard@$testAccountId'))!);
     expect(saved.units, [EarningUnit.day]);
 
     await tester.tap(find.widgetWithText(FilterChip, 'Per second'));
     await settle(tester, 5);
-    saved = DashboardConfig.fromJson((await LocalSettingsRepository(db, clock).read('dashboard'))!);
+    saved = DashboardConfig.fromJson((await LocalSettingsRepository(db, clock).read('dashboard@$testAccountId'))!);
     expect(saved.units, containsAll([EarningUnit.day, EarningUnit.second]));
     await done(tester);
   });

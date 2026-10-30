@@ -142,64 +142,65 @@ class DataScreen extends ConsumerWidget {
             ),
           ),
         const CsvSectionTiles(),
-        SettingsGroup(
-          title: 'Sample data',
-          footer: hasSample
-              ? 'Sample sources are named "Sample: …". Removing them deletes only sample records.'
-              : 'Adds a clearly labelled example salary and side income so you can explore. You can remove it '
-                  'at any time without touching your own data.',
-          children: [
-            if (hasSample)
-              SettingsTile(
-                icon: Icons.cleaning_services_outlined,
-                title: 'Remove sample data',
-                danger: true,
-                chevron: false,
-                onTap: () async {
-                  final ok = await confirmDialog(
-                    context,
-                    title: 'Remove sample data?',
-                    message: 'All sample income sources and their records will be deleted. Your own data is not '
-                        'affected.',
-                    confirm: 'Remove',
-                    destructive: true,
-                  );
-                  if (!ok || !context.mounted) return;
-                  await runGuarded(context, () async {
-                    final n = await ref.read(sampleDataServiceProvider).remove();
-                    if (context.mounted) {
-                      showMessage(context, 'Removed $n sample source${n == 1 ? '' : 's'}');
-                    }
-                  });
-                },
-              )
-            else
-              SettingsTile(
-                icon: Icons.science_outlined,
-                tone: SettingsTone.sky,
-                title: 'Add sample data',
-                chevron: false,
-                onTap: () async {
-                  final ok = await confirmDialog(
-                    context,
-                    title: 'Add sample data?',
-                    message: 'Example income sources labelled "Sample" will be added alongside your own data. '
-                        'They are included in totals until you remove them.',
-                    confirm: 'Add samples',
-                  );
-                  if (!ok || !context.mounted) return;
-                  await runGuarded(
-                    context,
-                    () => ref.read(sampleDataServiceProvider).insert(
-                          currencyCode: ref.read(currencyProvider).code,
-                          today: ref.read(todayProvider),
-                        ),
-                    success: 'Sample data added',
-                  );
-                },
-              ),
-          ],
-        ),
+        if (!ref.watch(isReadOnlyViewProvider))
+          SettingsGroup(
+            title: 'Sample data',
+            footer: hasSample
+                ? 'Sample sources are named "Sample: …". Removing them deletes only sample records of this account.'
+                : 'Adds a clearly labelled example salary and side income so you can explore. You can remove it '
+                    'at any time without touching your own data.',
+            children: [
+              if (hasSample)
+                SettingsTile(
+                  icon: Icons.cleaning_services_outlined,
+                  title: 'Remove sample data',
+                  danger: true,
+                  chevron: false,
+                  onTap: () async {
+                    final ok = await confirmDialog(
+                      context,
+                      title: 'Remove sample data?',
+                      message: 'All sample income sources and their records will be deleted. Your own data is not '
+                          'affected.',
+                      confirm: 'Remove',
+                      destructive: true,
+                    );
+                    if (!ok || !context.mounted) return;
+                    await runGuarded(context, () async {
+                      final n = await ref.read(sampleDataServiceProvider).remove();
+                      if (context.mounted) {
+                        showMessage(context, 'Removed $n sample source${n == 1 ? '' : 's'}');
+                      }
+                    });
+                  },
+                )
+              else
+                SettingsTile(
+                  icon: Icons.science_outlined,
+                  tone: SettingsTone.sky,
+                  title: 'Add sample data',
+                  chevron: false,
+                  onTap: () async {
+                    final ok = await confirmDialog(
+                      context,
+                      title: 'Add sample data?',
+                      message: 'Example income sources labelled "Sample" will be added alongside your own data. '
+                          'They are included in totals until you remove them.',
+                      confirm: 'Add samples',
+                    );
+                    if (!ok || !context.mounted) return;
+                    await runGuarded(
+                      context,
+                      () => ref.read(sampleDataServiceProvider).insert(
+                            currencyCode: ref.read(currencyProvider).code,
+                            today: ref.read(todayProvider),
+                          ),
+                      success: 'Sample data added',
+                    );
+                  },
+                ),
+            ],
+          ),
         const _StorageSection(),
         const _ValidationSection(),
         SettingsGroup(title: 'Danger zone', children: [
@@ -219,7 +220,7 @@ class DataScreen extends ConsumerWidget {
     final first = await confirmDialog(
       context,
       title: 'Delete all data?',
-      message: 'Every income source, record, transaction, setting and your PIN will be permanently erased from this '
+      message: 'Every account, income source, record, transaction, setting and PIN will be permanently erased from this '
           'device. Backup files you saved elsewhere are not affected. This cannot be undone.',
       confirm: 'Continue',
       destructive: true,

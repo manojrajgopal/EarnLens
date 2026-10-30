@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../core/clock.dart';
 import '../core/date_time/local_date.dart';
+import '../core/errors/app_exception.dart';
 import '../core/formatting/money_format.dart';
 import '../core/platform/file_service.dart';
 import '../core/security/biometric_service.dart';
@@ -12,6 +14,7 @@ import '../core/security/pin_service.dart';
 import '../core/security/secure_store.dart';
 import '../data/backup/backup_service.dart';
 import '../data/backup/csv_service.dart';
+import '../data/repositories/local_account_repository.dart';
 import '../data/repositories/local_earnings_data_source.dart';
 import '../data/repositories/local_income_source_repository.dart';
 import '../data/repositories/local_profile_settings_repository.dart';
@@ -23,6 +26,7 @@ import '../domain/calculation/earnings_snapshot.dart';
 import '../domain/calculation/financial_calendar.dart';
 import '../domain/calculation/forecast_calculator.dart';
 import '../domain/calculation/payment_schedule.dart';
+import '../domain/models/account.dart';
 import '../domain/models/income_source.dart';
 import '../domain/models/profile.dart';
 import '../domain/models/records.dart';
@@ -54,12 +58,35 @@ final profileRepositoryProvider =
     Provider<ProfileRepository>((ref) => LocalProfileRepository(ref.watch(databaseProvider)));
 final settingsRepositoryProvider = Provider<SettingsRepository>(
     (ref) => LocalSettingsRepository(ref.watch(databaseProvider), ref.watch(clockProvider)));
-final incomeRepositoryProvider = Provider<IncomeSourceRepository>((ref) =>
-    LocalIncomeSourceRepository(ref.watch(databaseProvider), ref.watch(clockProvider), ref.watch(idProvider)));
-final recordsRepositoryProvider = Provider<RecordsRepository>((ref) =>
-    LocalRecordsRepository(ref.watch(databaseProvider), ref.watch(clockProvider), ref.watch(idProvider)));
-final earningsDataSourceProvider =
-    Provider<EarningsDataSource>((ref) => LocalEarningsDataSource(ref.watch(databaseProvider)));
+final accountRepositoryProvider = Provider<AccountRepository>((ref) =>
+    LocalAccountRepository(ref.watch(databaseProvider), ref.watch(clockProvider), ref.watch(idProvider)));
+final combinedAccountRepositoryProvider = Provider<CombinedAccountRepository>((ref) =>
+    LocalCombinedAccountRepository(ref.watch(databaseProvider), ref.watch(clockProvider), ref.watch(idProvider)));
+
+/// Income sources of the active view. Rebuilt whenever the view changes, so a
+/// repository can only ever see and change the account on screen.
+final incomeRepositoryProvider = Provider<IncomeSourceRepository>((ref) => LocalIncomeSourceRepository(
+      ref.watch(databaseProvider),
+      ref.watch(clockProvider),
+      ref.watch(idProvider),
+      ref.watch(accountScopeProvider),
+    ));
+final recordsRepositoryProvider = Provider<RecordsRepository>((ref) => LocalRecordsRepository(
+      ref.watch(databaseProvider),
+      ref.watch(clockProvider),
+      ref.watch(idProvider),
+      ref.watch(accountScopeProvider),
+    ));
+/// Repositories bound to one specific account, for flows that write to an
+/// account that is not (yet) on screen: onboarding, imports, sample data.
+final accountIncomeRepositoryProvider = Provider.family<IncomeSourceRepository, String>((ref, accountId) =>
+    LocalIncomeSourceRepository(
+        ref.watch(databaseProvider), ref.watch(clockProvider), ref.watch(idProvider), AccountScope.single(accountId)));
+final accountRecordsRepositoryProvider = Provider.family<RecordsRepository, String>((ref, accountId) =>
+    LocalRecordsRepository(
+        ref.watch(databaseProvider), ref.watch(clockProvider), ref.watch(idProvider), AccountScope.single(accountId)));
+final earningsDataSourceProvider = Provider<EarningsDataSource>(
+    (ref) => LocalEarningsDataSource(ref.watch(databaseProvider), ref.watch(accountScopeProvider).visibleAccountIds));
 
 final pinServiceProvider =
     Provider<PinService>((ref) => PinService(ref.watch(secureStoreProvider), ref.watch(clockProvider)));
@@ -75,6 +102,118 @@ final sampleDataServiceProvider = Provider<SampleDataService>((ref) => SampleDat
       ref.watch(clockProvider),
       ref.watch(idProvider),
     ));
+final accountSampleDataServiceProvider = Provider.family<SampleDataService, String>((ref, accountId) =>
+    SampleDataService(
+      ref.watch(accountIncomeRepositoryProvider(accountId)),
+      ref.watch(accountRecordsRepositoryProvider(accountId)),
+      ref.watch(clockProvider),
+      ref.watch(idProvider),
+    ));
+
+// ---- Accounts ------------------------------------------------------------------
+
+final accountsStreamProvider =
+    StreamProvider<List<Account>>((ref) => ref.watch(accountRepositoryProvider).watchAccounts());
+final combinedAccountsStreamProvider =
+    StreamProvider<List<CombinedAccount>>((ref) => ref.watch(combinedAccountRepositoryProvider).watchCombined());
+
+/// All individual accounts (archived included), in switcher order.
+final accountsProvider = Provider<List<Account>>((ref) => ref.watch(accountsStreamProvider).value ?? const []);
+final combinedAccountsProvider =
+    Provider<List<CombinedAccount>>((ref) => ref.watch(combinedAccountsStreamProvider).value ?? const []);
+
+final accountByIdProvider = Provider.family<Account?, String>(
+    (ref, id) => ref.watch(accountsProvider).firstWhereOrNull((a) => a.id == id));
+final combinedByIdProvider = Provider.family<CombinedAccount?, String>(
+    (ref, id) => ref.watch(combinedAccountsProvider).firstWhereOrNull((c) => c.id == id));
+
+/// The view saved when the app was last used; read before the first frame.
+final initialViewProvider = Provider<AccountView?>((ref) => null);
+
+/// The view the user picked. Change it through `AccountSwitcher`, which
+/// preloads the new data and persists the choice.
+final selectedViewProvider = NotifierProvider<SelectedView, AccountView?>(SelectedView.new);
+
+class SelectedView extends Notifier<AccountView?> {
+  @override
+  AccountView? build() => ref.read(initialViewProvider);
+
+  void select(AccountView? view) => state = view;
+}
+
+/// The selected view if it still exists, else the first active account.
+/// Null only while accounts load or before the first account exists.
+AccountView? resolveView(AccountView? selected, List<Account> accounts, List<CombinedAccount> combined) {
+  final valid = switch (selected) {
+    IndividualView(:final id) => accounts.any((a) => a.id == id),
+    CombinedView(:final id) => combined.any((c) => c.id == id),
+    null => false,
+  };
+  if (valid) return selected;
+  final first = accounts.firstWhereOrNull((a) => !a.isArchived) ?? accounts.firstOrNull;
+  return first == null ? null : IndividualView(first.id);
+}
+
+final activeViewProvider = Provider<AccountView?>((ref) {
+  final accounts = ref.watch(accountsStreamProvider).value;
+  final combined = ref.watch(combinedAccountsStreamProvider).value;
+  if (accounts == null || combined == null) return null;
+  return resolveView(ref.watch(selectedViewProvider), accounts, combined);
+});
+
+/// The individual account on screen, or null in a combined view.
+final activeAccountProvider = Provider<Account?>((ref) => switch (ref.watch(activeViewProvider)) {
+      IndividualView(:final id) => ref.watch(accountByIdProvider(id)),
+      _ => null,
+    });
+
+/// The combined account on screen, or null in an individual view.
+final activeCombinedProvider = Provider<CombinedAccount?>((ref) => switch (ref.watch(activeViewProvider)) {
+      CombinedView(:final id) => ref.watch(combinedByIdProvider(id)),
+      _ => null,
+    });
+
+/// Combined accounts are read-only: edit actions are hidden and repositories
+/// refuse writes.
+final isReadOnlyViewProvider = Provider<bool>((ref) => ref.watch(activeViewProvider)?.isCombined ?? false);
+
+/// Individual account ids the active view reads from.
+final viewAccountIdsProvider = Provider<Set<String>>((ref) => switch (ref.watch(activeViewProvider)) {
+      IndividualView(:final id) => {id},
+      CombinedView(:final id) => {...?ref.watch(combinedByIdProvider(id))?.memberIds},
+      null => const {},
+    });
+
+/// Accounts opened with their own PIN during this unlocked session.
+final accountUnlocksProvider = NotifierProvider<AccountUnlocks, Set<String>>(AccountUnlocks.new);
+
+class AccountUnlocks extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  void unlock(Iterable<String> ids) => state = {...state, ...ids};
+
+  /// Called when the app locks: protected accounts need their PIN again.
+  void clear() => state = const {};
+}
+
+/// PIN-protected accounts of the active view that are not unlocked yet.
+final lockedViewAccountsProvider = Provider<List<Account>>((ref) {
+  final unlocked = ref.watch(accountUnlocksProvider);
+  return [
+    for (final id in ref.watch(viewAccountIdsProvider))
+      if (ref.watch(accountByIdProvider(id)) case final a? when a.requiresPin && !unlocked.contains(id)) a,
+  ];
+});
+
+/// What repositories and the snapshot may read and write. Empty while the
+/// view is loading or still locked, so protected data is never even loaded.
+final accountScopeProvider = Provider<AccountScope>((ref) {
+  final view = ref.watch(activeViewProvider);
+  if (view == null || ref.watch(lockedViewAccountsProvider).isNotEmpty) return AccountScope.none;
+  final ids = ref.watch(viewAccountIdsProvider);
+  return view is IndividualView ? AccountScope.single(view.id) : AccountScope.readOnly(ids);
+});
 
 // ---- Profile & settings ------------------------------------------------------
 
@@ -87,16 +226,22 @@ StreamProvider<Map<String, dynamic>?> _settingsKey(String key) => _settingsStrea
     );
 
 abstract final class SettingsKeys {
+  // Per view: `dashboard@<accountId>` or `dashboard@combined:<id>`.
   static const dashboard = 'dashboard';
   static const appearance = 'appearance';
   static const security = 'security';
+  // Per individual account: `notifications@<accountId>`, `calculation@<accountId>`.
   static const notifications = 'notifications';
   static const calculation = 'calculation';
   static const backup = 'backup';
+  static const activeView = 'activeView';
 }
 
+/// Dashboard layout and visible rates of the active view.
 final dashboardConfigProvider = Provider<DashboardConfig>((ref) {
-  final m = ref.watch(_settingsKey(SettingsKeys.dashboard)).value;
+  final view = ref.watch(activeViewProvider);
+  if (view == null) return DashboardConfig.defaults();
+  final m = ref.watch(_settingsKey(accountSettingsKey(SettingsKeys.dashboard, view.settingsKey))).value;
   return m == null ? DashboardConfig.defaults() : DashboardConfig.fromJson(m);
 });
 final appearanceProvider = Provider<AppearanceSettings>((ref) {
@@ -107,34 +252,66 @@ final securitySettingsProvider = Provider<SecuritySettings>((ref) {
   final m = ref.watch(_settingsKey(SettingsKeys.security)).value;
   return m == null ? const SecuritySettings() : SecuritySettings.fromJson(m);
 });
-final notificationSettingsProvider = Provider<NotificationSettings>((ref) {
-  final m = ref.watch(_settingsKey(SettingsKeys.notifications)).value;
+/// Reminder preferences of one individual account.
+final accountNotificationSettingsProvider = Provider.family<NotificationSettings, String>((ref, accountId) {
+  final m = ref.watch(_settingsKey(accountSettingsKey(SettingsKeys.notifications, accountId))).value;
   return m == null ? const NotificationSettings() : NotificationSettings.fromJson(m);
 });
-final calculationSettingsProvider = Provider<CalculationSettings>((ref) {
-  final m = ref.watch(_settingsKey(SettingsKeys.calculation)).value;
+
+/// Defaults for new income sources of one individual account.
+final accountCalculationSettingsProvider = Provider.family<CalculationSettings, String>((ref, accountId) {
+  final m = ref.watch(_settingsKey(accountSettingsKey(SettingsKeys.calculation, accountId))).value;
   return m == null ? const CalculationSettings() : CalculationSettings.fromJson(m);
+});
+
+/// Reminder preferences of the active account (defaults in combined views,
+/// whose settings are read-only).
+final notificationSettingsProvider = Provider<NotificationSettings>((ref) {
+  final id = ref.watch(activeAccountProvider)?.id;
+  return id == null ? const NotificationSettings() : ref.watch(accountNotificationSettingsProvider(id));
+});
+final calculationSettingsProvider = Provider<CalculationSettings>((ref) {
+  final id = ref.watch(activeAccountProvider)?.id;
+  return id == null ? const CalculationSettings() : ref.watch(accountCalculationSettingsProvider(id));
 });
 final backupStateProvider = Provider<BackupState>((ref) {
   final m = ref.watch(_settingsKey(SettingsKeys.backup)).value;
   return m == null ? const BackupState() : BackupState.fromJson(m);
 });
 
-/// Writes typed settings sections.
+/// Writes typed settings sections. Dashboard, notification and calculation
+/// settings belong to the active view and are never shared between accounts.
 class SettingsController {
-  SettingsController(this._repo);
+  SettingsController(this._repo, this._view);
   final SettingsRepository _repo;
+  final AccountView? _view;
 
-  Future<void> saveDashboard(DashboardConfig c) => _repo.write(SettingsKeys.dashboard, c.toJson());
+  /// Per-account sections can only be changed in an individual view.
+  String _accountKey(String section) => switch (_view) {
+        IndividualView(:final id) => accountSettingsKey(section, id),
+        _ => throw const ReadOnlyViewException(),
+      };
+
+  Future<void> saveDashboard(DashboardConfig c) {
+    final view = _view;
+    if (view == null) throw const ReadOnlyViewException();
+    return _repo.write(accountSettingsKey(SettingsKeys.dashboard, view.settingsKey), c.toJson());
+  }
+
   Future<void> saveAppearance(AppearanceSettings s) => _repo.write(SettingsKeys.appearance, s.toJson());
   Future<void> saveSecurity(SecuritySettings s) => _repo.write(SettingsKeys.security, s.toJson());
-  Future<void> saveNotifications(NotificationSettings s) => _repo.write(SettingsKeys.notifications, s.toJson());
-  Future<void> saveCalculation(CalculationSettings s) => _repo.write(SettingsKeys.calculation, s.toJson());
+  Future<void> saveNotifications(NotificationSettings s) =>
+      _repo.write(_accountKey(SettingsKeys.notifications), s.toJson());
+  Future<void> saveCalculation(CalculationSettings s) => _repo.write(_accountKey(SettingsKeys.calculation), s.toJson());
   Future<void> saveBackup(BackupState s) => _repo.write(SettingsKeys.backup, s.toJson());
 }
 
-final settingsControllerProvider =
-    Provider<SettingsController>((ref) => SettingsController(ref.watch(settingsRepositoryProvider)));
+/// Settings of one specific individual account.
+final accountSettingsControllerProvider = Provider.family<SettingsController, String>(
+    (ref, accountId) => SettingsController(ref.watch(settingsRepositoryProvider), IndividualView(accountId)));
+
+final settingsControllerProvider = Provider<SettingsController>(
+    (ref) => SettingsController(ref.watch(settingsRepositoryProvider), ref.watch(activeViewProvider)));
 
 // ---- Calculation -------------------------------------------------------------
 
@@ -158,24 +335,46 @@ final forecastCalculatorProvider =
 final paymentSchedulerProvider =
     Provider<PaymentScheduler>((ref) => PaymentScheduler(ref.watch(accrualEngineProvider)));
 
-final snapshotStreamProvider =
-    StreamProvider<EarningsSnapshot>((ref) => ref.watch(earningsDataSourceProvider).watchSnapshot());
+/// Live snapshot of one scope. Each view has its own instance, so a newly
+/// opened account starts from its own data, never from the previous
+/// account's figures. Disposed when no longer shown.
+final scopedSnapshotProvider = StreamProvider.autoDispose.family<EarningsSnapshot, AccountScope>(
+    (ref, scope) => LocalEarningsDataSource(ref.watch(databaseProvider), scope.visibleAccountIds).watchSnapshot());
+
+/// Snapshot of the active view: loading until its scope is known and loaded.
+final snapshotStreamProvider = Provider<AsyncValue<EarningsSnapshot>>((ref) {
+  final scope = ref.watch(accountScopeProvider);
+  if (scope.visibleAccountIds.isEmpty) {
+    final accounts = ref.watch(accountsStreamProvider).value;
+    // No account yet (first launch): nothing to show rather than a spinner.
+    return accounts != null && accounts.isEmpty ? AsyncData(EarningsSnapshot.empty) : const AsyncLoading();
+  }
+  return ref.watch(scopedSnapshotProvider(scope));
+});
 
 /// Latest snapshot, empty while loading.
 final snapshotProvider = Provider<EarningsSnapshot>((ref) => ref.watch(snapshotStreamProvider).value ?? EarningsSnapshot.empty);
 
-final currencyProvider = Provider<Currency>(
-    (ref) => Currency.byCode(ref.watch(profileStreamProvider).value?.currencyCode ?? Currency.inr.code));
-
-final moneyFormatterProvider = Provider<MoneyFormatter>((ref) {
-  final profile = ref.watch(profileStreamProvider).value;
-  return MoneyFormatter(profile?.locale ?? 'en_IN', ref.watch(currencyProvider));
+/// Display currency of the active view: the account's currency, or the
+/// combined account's chosen currency. Amounts in other currencies are never
+/// converted or added in.
+final currencyProvider = Provider<Currency>((ref) {
+  final code = ref.watch(activeAccountProvider)?.currencyCode ??
+      ref.watch(activeCombinedProvider)?.currencyCode ??
+      ref.watch(profileStreamProvider).value?.currencyCode ??
+      Currency.inr.code;
+  return Currency.byCode(code);
 });
 
-MoneyFormatter formatterFor(Ref ref, String currencyCode) {
-  final profile = ref.watch(profileStreamProvider).value;
-  return MoneyFormatter(profile?.locale ?? 'en_IN', Currency.byCode(currencyCode));
-}
+/// Number formatting locale: the account's override, else the profile's.
+final localeProvider = Provider<String>((ref) =>
+    ref.watch(activeAccountProvider)?.locale ?? ref.watch(profileStreamProvider).value?.locale ?? 'en_IN');
+
+final moneyFormatterProvider =
+    Provider<MoneyFormatter>((ref) => MoneyFormatter(ref.watch(localeProvider), ref.watch(currencyProvider)));
+
+MoneyFormatter formatterFor(Ref ref, String currencyCode) =>
+    MoneyFormatter(ref.watch(localeProvider), Currency.byCode(currencyCode));
 
 /// Emits once per second for live counters. Only active while watched.
 final tickerProvider = StreamProvider<DateTime>((ref) {
@@ -222,12 +421,14 @@ final calendarEventsProvider =
 final auditProvider = StreamProvider.family<List<AuditEntry>, String?>(
     (ref, entityId) => ref.watch(recordsRepositoryProvider).watchAudit(entityId: entityId));
 
-/// Expected payments from three months back to three months ahead.
-final expectedPaymentsProvider = Provider<List<ExpectedPayment>>((ref) {
-  final snap = ref.watch(snapshotProvider);
-  final today = ref.watch(todayProvider);
-  final currency = ref.watch(currencyProvider).code;
-  final scheduler = ref.watch(paymentSchedulerProvider);
+/// Expected payments in [currency] from four months back to three months
+/// ahead.
+List<ExpectedPayment> expectedPaymentsFor(
+  PaymentScheduler scheduler,
+  EarningsSnapshot snap,
+  LocalDate today,
+  String currency,
+) {
   final rules = [
     for (final r in snap.rules.values)
       if (r.source.currencyCode == currency) r,
@@ -239,4 +440,12 @@ final expectedPaymentsProvider = Provider<List<ExpectedPayment>>((ref) {
     periods: [for (var i = -4; i <= 3; i++) today.yearMonth.addMonths(i)],
     today: today,
   );
-});
+}
+
+/// Expected payments of the active view.
+final expectedPaymentsProvider = Provider<List<ExpectedPayment>>((ref) => expectedPaymentsFor(
+      ref.watch(paymentSchedulerProvider),
+      ref.watch(snapshotProvider),
+      ref.watch(todayProvider),
+      ref.watch(currencyProvider).code,
+    ));

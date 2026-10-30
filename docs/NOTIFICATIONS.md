@@ -22,7 +22,14 @@ earnings summary, calendar "remind me" events.
   re-planning replaces all pending notifications, so duplicates cannot accumulate.
 - Reminder time and quiet hours are configurable; a time inside quiet hours moves to the end of
   quiet hours.
+- Reminders are planned **per account**, from that account's own records, reminder settings,
+  currency and calendar.
+  - Keys are prefixed with the account id. Taps open the right account first (`?account=<id>`).
+  - When several accounts have reminders on, titles name the account.
+  - A reminder never includes another account's data.
+  - The backup reminder is app-wide and planned once.
 - Privacy mode removes amounts from notification text.
+- Reminders of a PIN-protected account use a generic text with no source names, titles or amounts.
 - Re-planning happens (debounced 2 s) whenever data, settings, events, backup state or the date
   change, and on app resume. Tapping a notification opens the related screen.
 - `notification_history` records what was **scheduled**. Scheduling is never presented as delivery.

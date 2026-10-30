@@ -23,8 +23,9 @@ void main() {
   Future<(AppDatabase, String)> seeded() async {
     final db = memoryDatabase();
     final ids = SeqIds();
-    final sources = LocalIncomeSourceRepository(db, clock, ids);
-    final records = LocalRecordsRepository(db, clock, ids);
+    await seedAccount(db);
+    final sources = LocalIncomeSourceRepository(db, clock, ids, testScope);
+    final records = LocalRecordsRepository(db, clock, ids, testScope);
     final s = source(id: 'salary');
     await sources.createSource(s, initialRate: rev(s.id, s.startDate, 3100000));
     for (var m = 8; m <= 10; m++) {
@@ -131,10 +132,10 @@ void main() {
       final (db, _) = await seeded();
       final ids = SeqIds();
       final csv = CsvService(clock, ids);
-      final snap = await LocalEarningsDataSource(db).loadSnapshot();
+      final snap = await LocalEarningsDataSource(db, {testAccountId}).loadSnapshot();
       final text = csv.exportLedger(snap);
       expect(text.split('\r\n').length, 4);
-      final report = await csv.importLedger(text, snap, LocalRecordsRepository(db, clock, ids));
+      final report = await csv.importLedger(text, snap, LocalRecordsRepository(db, clock, ids, testScope));
       expect(report.errors, isEmpty);
       expect(report.imported, 0);
       expect(report.duplicates, 3);
@@ -145,14 +146,14 @@ void main() {
       final (db, _) = await seeded();
       final ids = SeqIds();
       final csv = CsvService(clock, ids);
-      final snap = await LocalEarningsDataSource(db).loadSnapshot();
+      final snap = await LocalEarningsDataSource(db, {testAccountId}).loadSnapshot();
       const input = 'date,source,type,amount\r\n'
           '2024-11-01,Source salary,received,500\r\n'
           '2024-13-01,Source salary,received,500\r\n'
           '2024-11-02,Unknown,received,500\r\n'
           '2024-11-03,Source salary,bogus,500\r\n'
           '2024-11-04,Source salary,received,abc\r\n';
-      final report = await csv.importLedger(input, snap, LocalRecordsRepository(db, clock, ids));
+      final report = await csv.importLedger(input, snap, LocalRecordsRepository(db, clock, ids, testScope));
       expect(report.imported, 0);
       expect(report.errors.length, 4);
       expect(report.errors.first, startsWith('Line 3'));
