@@ -14,6 +14,7 @@ import '../../../domain/models/enums.dart';
 import '../../../domain/models/income_source.dart';
 import '../../../domain/models/profile.dart';
 import '../../../domain/models/settings.dart';
+import '../../../domain/models/account.dart';
 import '../../../domain/money/currency.dart';
 import '../../../shared/layout/page_layout.dart';
 import '../../../shared/widgets/components.dart';
@@ -121,9 +122,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final calendar = FinancialCalendar(tz.getLocation(_timezone));
     final today = calendar.today(now);
 
-    await settings.saveDashboard(_dashboard);
+    // Everything entered here belongs to the first account.
+    final accounts = ref.read(accountRepositoryProvider);
+    var account = (await accounts.accounts()).firstOrNull;
+    if (account == null) {
+      account = Account(
+        id: ids.newId(),
+        name: AccountType.personal.label,
+        type: AccountType.personal,
+        currencyCode: _currency.code,
+        createdAt: now,
+        updatedAt: now,
+      );
+      await accounts.createAccount(account);
+    }
+    final accountId = account.id;
+    ref.read(selectedViewProvider.notifier).select(IndividualView(accountId));
+    await ref.read(settingsRepositoryProvider).write(SettingsKeys.activeView, IndividualView(accountId).toJson());
+    final accountSettings = ref.read(accountSettingsControllerProvider(accountId));
+
+    await accountSettings.saveDashboard(_dashboard);
     await settings.saveSecurity(SecuritySettings(biometricsEnabled: _biometrics && _pinSet));
-    await settings.saveNotifications(NotificationSettings(masterEnabled: _notifications));
+    await accountSettings.saveNotifications(NotificationSettings(masterEnabled: _notifications));
 
     if (_addIncome) {
       final minor = parseMoney(_salary, _currency)!;
@@ -137,11 +157,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         startDate: _joining,
         payDay: _payDay,
         payOffsetMonths: _paidNextMonth ? 1 : 0,
-        schedule: ref.read(calculationSettingsProvider).defaultSchedule,
+        schedule: ref.read(accountCalculationSettingsProvider(accountId)).defaultSchedule,
         createdAt: now,
         updatedAt: now,
       );
-      await ref.read(incomeRepositoryProvider).createSource(
+      await ref.read(accountIncomeRepositoryProvider(accountId)).createSource(
             source,
             initialRate: RateRevision(
               id: ids.newId(),
@@ -155,7 +175,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           );
     }
     if (widget.withSampleData) {
-      await ref.read(sampleDataServiceProvider).insert(currencyCode: _currency.code, today: today);
+      await ref.read(accountSampleDataServiceProvider(accountId)).insert(currencyCode: _currency.code, today: today);
     }
 
     // Saving the completed profile last makes the router leave onboarding.

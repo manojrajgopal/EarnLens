@@ -26,12 +26,13 @@ void main() {
   final clock = FixedClock(DateTime.utc(2024, 11, 15, 6));
   late SeqIds ids;
 
-  setUp(() {
+  setUp(() async {
     db = memoryDatabase();
+    await seedAccount(db);
     ids = SeqIds();
-    sources = LocalIncomeSourceRepository(db, clock, ids);
-    records = LocalRecordsRepository(db, clock, ids);
-    data = LocalEarningsDataSource(db);
+    sources = LocalIncomeSourceRepository(db, clock, ids, testScope);
+    records = LocalRecordsRepository(db, clock, ids, testScope);
+    data = LocalEarningsDataSource(db, {testAccountId});
   });
   tearDown(() => db.close());
 
@@ -56,7 +57,7 @@ void main() {
   test('database is created with foreign keys enforced', () async {
     final fk = await db.customSelect('PRAGMA foreign_keys').getSingle();
     expect(fk.data.values.first, 1);
-    expect(db.schemaVersion, 1);
+    expect(db.schemaVersion, 2);
   });
 
   test('profile and settings persist', () async {

@@ -25,7 +25,8 @@ class NotificationPlanner {
     required List<ExpectedPayment> payments,
     required List<CalendarEvent> events,
     required NotificationSettings settings,
-    required BackupState backup,
+    /// App-wide backup reminder; null when another account's plan has it.
+    BackupState? backup,
     required int nowMicros,
     required MoneyFormatter money,
     required bool privacyMode,
@@ -108,20 +109,22 @@ class NotificationPlanner {
           route: '/insights');
     }
 
-    final last = backup.lastBackupAt;
-    final LocalDate backupDay;
-    final int daysSince;
-    if (last == null) {
-      backupDay = today.addDays(1);
-      daysSince = -1;
-    } else {
-      final lastDay = calendar.dateOf(last.microsecondsSinceEpoch);
-      final due = lastDay.addDays(backup.reminderDays);
-      backupDay = due.isAfter(today) ? due : today.addDays(1);
-      daysSince = lastDay.daysUntil(backupDay);
+    if (backup != null) {
+      final last = backup.lastBackupAt;
+      final LocalDate backupDay;
+      final int daysSince;
+      if (last == null) {
+        backupDay = today.addDays(1);
+        daysSince = -1;
+      } else {
+        final lastDay = calendar.dateOf(last.microsecondsSinceEpoch);
+        final due = lastDay.addDays(backup.reminderDays);
+        backupDay = due.isAfter(today) ? due : today.addDays(1);
+        daysSince = lastDay.daysUntil(backupDay);
+      }
+      add('backup:$backupDay', NotificationCategory.backupReminder, backupDay, NotificationTemplates.backup(daysSince),
+          route: '/settings/data');
     }
-    add('backup:$backupDay', NotificationCategory.backupReminder, backupDay, NotificationTemplates.backup(daysSince),
-        route: '/settings/data');
 
     final weekly = settings.summaryFrequency == SummaryFrequency.weekly;
     var summaryDay = today.addDays(1);

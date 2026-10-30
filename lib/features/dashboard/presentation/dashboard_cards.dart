@@ -287,6 +287,16 @@ class MonthToDateCard extends ConsumerWidget {
           GradientProgress(value: progress, semanticsLabel: 'Progress toward expected'),
           const SizedBox(height: 8),
           AmountText('of ${money.minor(s.expected)} expected', style: AppType.caption.copyWith(color: c.inkMuted)),
+          // The account's own monthly goal, when one is set.
+          if (ref.watch(activeAccountProvider)?.monthlyTargetMinor case final target? when target > 0) ...[
+            const SizedBox(height: 12),
+            GradientProgress(value: (earned / target).clamp(0.0, 1.0), semanticsLabel: 'Progress toward monthly target'),
+            const SizedBox(height: 8),
+            AmountText(
+              '${(earned * 100 / target).round()}% of ${money.minor(target, showMinor: false)} target',
+              style: AppType.caption.copyWith(color: c.inkMuted),
+            ),
+          ],
         ],
       ),
     );

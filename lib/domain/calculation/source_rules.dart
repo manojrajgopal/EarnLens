@@ -12,8 +12,10 @@ class SourceRules {
   })  : revisions = _sorted(revisions.where((r) => r.sourceId == source.id)),
         pauses = pauses.where((p) => p.sourceId == source.id).toList(),
         _overrides = {
+          // A day off for "all sources" only covers the sources of the
+          // account it was recorded in, so combined views never mix calendars.
           for (final o in overrides)
-            if (o.sourceId == null || o.sourceId == source.id) o.date: o.type,
+            if (o.sourceId == source.id || (o.sourceId == null && o.accountId == source.accountId)) o.date: o.type,
         };
 
   final IncomeSource source;

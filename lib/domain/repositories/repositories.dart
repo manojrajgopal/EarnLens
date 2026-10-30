@@ -1,5 +1,6 @@
 import '../../core/date_time/local_date.dart';
 import '../calculation/earnings_snapshot.dart';
+import '../models/account.dart';
 import '../models/enums.dart';
 import '../models/income_source.dart';
 import '../models/profile.dart';
@@ -19,6 +20,51 @@ abstract interface class SettingsRepository {
   Future<Map<String, dynamic>?> read(String key);
   Stream<Map<String, dynamic>?> watch(String key);
   Future<void> write(String key, Map<String, dynamic> value);
+}
+
+/// Individual accounts. Each owns its own income sources, records and
+/// settings; at most [Account.maxAccounts] can exist.
+abstract interface class AccountRepository {
+  Stream<List<Account>> watchAccounts();
+  Future<List<Account>> accounts();
+  Future<Account?> account(String id);
+
+  /// Throws [AccountLimitException] when the limit is reached.
+  Future<void> createAccount(Account account);
+  Future<void> updateAccount(Account account);
+  Future<void> setArchived(String id, {required bool archived});
+
+  /// Persists the switcher order of [ids].
+  Future<void> reorder(List<String> ids);
+
+  /// What [deleteAccount] would remove, without changing anything.
+  Future<AccountDeletionImpact> previewDelete(String id);
+
+  /// Deletes the account with all of its own records and settings, removes it
+  /// from combined accounts (dropping those left with fewer than two
+  /// members) and never touches another account's records.
+  Future<AccountDeletionImpact> deleteAccount(String id);
+}
+
+/// Combined accounts: saved selections of individual accounts whose figures
+/// are aggregated on the fly. They hold no financial records.
+abstract interface class CombinedAccountRepository {
+  Stream<List<CombinedAccount>> watchCombined();
+  Future<List<CombinedAccount>> combined();
+  Future<CombinedAccount?> byId(String id);
+
+  /// The combined account with exactly these members, in any order.
+  Future<CombinedAccount?> findByMembers(Iterable<String> accountIds);
+
+  /// Throws [DuplicateCombinationException] when the same member set exists.
+  Future<void> create(CombinedAccount combined);
+
+  /// Name, avatar, description and display currency; members are unchanged.
+  Future<void> update(CombinedAccount combined);
+  Future<void> setMembers(String id, List<String> accountIds);
+
+  /// Removes the configuration only; member records are untouched.
+  Future<void> delete(String id);
 }
 
 abstract interface class IncomeSourceRepository {

@@ -18,10 +18,13 @@ flutter test test/widget             # onboarding, PIN lock, dashboard, forms
 | `unit/services_test.dart` | dashboard preference invariants, PIN hashing/rate limiting, notification planner (opt-in, keys, privacy, quiet hours), formatting |
 | `integration/repositories_test.dart` | DB creation & FKs, CRUD + audit, validation rollback, duplicate guard, archive vs delete, pause/resume, month finalise/reopen, snapshot stream, sample data removal |
 | `integration/backup_csv_test.dart` | backup round trip, encryption, tamper detection, version checks, merge idempotency, failed-restore rollback, CSV export/import/validation/escaping |
-| `integration/migration_test.dart` | live schema matches `drift_schemas/` snapshot |
+| `integration/migration_test.dart` | live schema matches `drift_schemas/` v2. Upgrading v1 → v2 with data keeps every row, assigns it to one Personal account, moves per-account settings, keeps the database writable, and activates the ownership triggers. |
+| `integration/accounts_test.dart` | 10-account limit (repository and trigger); combined accounts don't count; validation; isolation (reads, stamped writes, ownership checks, read-only scopes, mismatch triggers, per-account holidays); combined duplicates in any order; invalid members; combined totals equal the members' sum and recalculate after a hike; no copied records; member add/remove; member changes that would duplicate; deleting a combined keeps member records; currency isolation; account deletion (own data only, combined pruning or update, duplicate collapse, last account protected) |
+| `integration/accounts_backup_test.dart` | backups carry accounts, combined accounts, memberships and per-account settings; cross-account records rejected; merge respects the limit and is idempotent; v1 backups import into one Personal account; per-account notification keys and routes; protected accounts' reminders hide names and amounts |
 | `widget/app_flow_test.dart` | onboarding flow, PIN creation/lock/unlock, dashboard rendering, customisation |
 | `widget/refresh_and_nav_test.dart` | pull-to-refresh threshold, short pulls, normal scrolling, no concurrent refreshes, error recovery, empty lists, horizontal carousels ignored, refresh writes no records; tab state preserved, back at a tab root returns Home, centre orb opens Insights |
-| `widget/screens_smoke_test.dart` | every route rendered with sample data at 360 px and 1280 px; fails on any overflow or exception |
+| `widget/screens_smoke_test.dart` | every route rendered with sample data at 360 px and 1280 px, including every account screen and the main screens inside a combined account; fails on any overflow or exception |
+| `widget/accounts_flow_test.dart` | switching shows only the chosen account and writes nothing; the choice persists; creating an account from the switcher; the limit message at 10; duplicate combination detected in the UI; combined dashboard, read-only income and the guard's "Open <owner>"; PIN gate and unlock; deleting an account requires its name |
 | `tools/screenshot*_test.dart` | opt-in visual harnesses (`--dart-define=SCREENSHOTS=true --update-goldens`) for several device sizes, notch/gesture/3-button insets, dark mode and refresh frames → `build/screens/` |
 
 ## Required regression tests (spec §24.4)
@@ -40,6 +43,10 @@ flutter test test/widget             # onboarding, PIN lock, dashboard, forms
 | 10 | Timezone change doesn't rewrite history | *the same instant is interpreted by the financial timezone, not the device* |
 | 11 | Rounding doesn't accumulate | *rounding displayed per-second values does not leak into totals* |
 | 12 | Month/year transitions | *adjacent half-open ranges do not double count the boundary*, *year boundary splits correctly* |
+| 13 | Account data never leaks | *records of one account never appear in another*, *an account cannot change another account's records*, *an "all sources" holiday only applies inside its own account* |
+| 14 | Switching changes nothing | *switching shows only the chosen account and changes no records* |
+| 15 | Combined never copies or edits | *creating a combined account copies no records*, *combined (read-only) scopes refuse every write*, *deleting a combined account keeps every member record* |
+| 16 | No duplicate combinations | *the same members in a different order are a duplicate*, *member changes cannot create a duplicate set* |
 
 ## Not automated
 

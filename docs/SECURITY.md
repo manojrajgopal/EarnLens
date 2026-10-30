@@ -21,6 +21,21 @@ root/jailbreak access or a compromised OS.
   was enabled) followed by setting a new PIN, or (b) erasing all local data and restoring a backup.
   The UI explains both consequences.
 
+## Account PIN
+
+An individual account can also have its own PIN, on top of the app PIN. Setting one requires an
+app PIN.
+
+- It uses the same verifier scheme, rate limiting and lockout as the app PIN, under its own
+  secure-store keys (`account.<id>.pin.*`).
+- While locked, the account's records are not even loaded (the account scope is empty).
+- Combined accounts ask for the PIN of every protected member.
+- Unlocks end when the app locks.
+- Reminders and the home-screen widget never show a protected account's amounts or names.
+- Deleting the account, or "Delete all data", removes its verifier.
+
+Accounts are local data sets, not separate logins or cloud identities. See MULTI_ACCOUNTS.md.
+
 ## Biometrics
 
 Optional; offered only when the device supports it and a PIN exists. Enabling it requires a

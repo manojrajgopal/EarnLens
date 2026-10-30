@@ -54,6 +54,7 @@ class WorkSchedule {
 class IncomeSource {
   const IncomeSource({
     required this.id,
+    this.accountId = '',
     required this.name,
     required this.kind,
     required this.category,
@@ -83,6 +84,10 @@ class IncomeSource {
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
   final String name;
   final IncomeKind kind;
   final IncomeCategory category;
@@ -150,6 +155,7 @@ class IncomeSource {
   }) =>
       IncomeSource(
         id: id,
+        accountId: accountId,
         name: name ?? this.name,
         kind: kind,
         category: category,
@@ -185,6 +191,7 @@ class IncomeSource {
 class RateRevision {
   const RateRevision({
     required this.id,
+    this.accountId = '',
     required this.sourceId,
     required this.effectiveFrom,
     required this.amountMinor,
@@ -196,6 +203,10 @@ class RateRevision {
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
   final String sourceId;
   final LocalDate effectiveFrom;
   final int amountMinor;
@@ -212,12 +223,17 @@ class RateRevision {
 class SourcePause {
   const SourcePause({
     required this.id,
+    this.accountId = '',
     required this.sourceId,
     required this.start,
     this.endExclusive,
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
   final String sourceId;
   final LocalDate start;
 
@@ -232,6 +248,7 @@ class SourcePause {
 class DayOverride {
   const DayOverride({
     required this.id,
+    this.accountId = '',
     required this.date,
     required this.type,
     this.sourceId,
@@ -239,6 +256,10 @@ class DayOverride {
   });
 
   final String id;
+
+  /// Owning individual account. Stamped by the account-scoped repository on
+  /// insert (any value passed in is replaced); always set on loaded records.
+  final String accountId;
 
   /// Null applies to every working-day source.
   final String? sourceId;

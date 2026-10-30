@@ -2,12 +2,15 @@ import 'package:earnlens/app.dart';
 import 'package:earnlens/core/clock.dart';
 import 'package:earnlens/core/routing/app_router.dart';
 import 'package:earnlens/core/security/secure_store.dart';
+import 'package:earnlens/data/repositories/local_account_repository.dart';
 import 'package:earnlens/data/repositories/local_income_source_repository.dart';
 import 'package:earnlens/data/repositories/local_profile_settings_repository.dart';
 import 'package:earnlens/data/repositories/local_records_repository.dart';
+import 'package:earnlens/domain/models/account.dart';
 import 'package:earnlens/domain/models/enums.dart';
 import 'package:earnlens/domain/models/profile.dart';
 import 'package:earnlens/domain/services/sample_data_service.dart';
+import 'package:earnlens/features/accounts/application/account_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,8 +41,9 @@ void main() {
         createdAt: clock.now(),
         updatedAt: clock.now(),
       ));
-      final sources = LocalIncomeSourceRepository(db, clock, ids);
-      final records = LocalRecordsRepository(db, clock, ids);
+      await seedAccount(db);
+      final sources = LocalIncomeSourceRepository(db, clock, ids, testScope);
+      final records = LocalRecordsRepository(db, clock, ids, testScope);
       await SampleDataService(sources, records, clock, ids).insert(currencyCode: 'INR', today: d(2024, 10, 15));
       final temp = source(id: 'temp', kind: IncomeKind.temporary, start: d(2024, 10, 10), end: d(2024, 10, 24),
           payRule: PayRule.manual, expectedPayDate: d(2024, 10, 30));
@@ -50,6 +54,19 @@ void main() {
       final item = (await db.select(db.compensationItems).get()).first.id;
       final entry = (await db.select(db.ledgerEntries).get()).first.id;
       final rev0 = (await db.select(db.rateRevisions).get()).first.id;
+      // A second account (one USD source) and a combined account of both.
+      await seedAccount(db, id: 'acc-family', name: 'Family');
+      final usd = source(id: 'usd', start: d(2024, 1, 1), currency: 'USD');
+      await LocalIncomeSourceRepository(db, clock, ids, AccountScope.single('acc-family'))
+          .createSource(usd, initialRate: rev('usd', usd.startDate, 500000));
+      await LocalCombinedAccountRepository(db, clock, ids).create(CombinedAccount(
+        id: 'combo',
+        name: 'Household',
+        currencyCode: 'INR',
+        memberIds: const ['acc-family', testAccountId],
+        createdAt: clock.now(),
+        updatedAt: clock.now(),
+      ));
 
       final errors = <String>[];
       var current = '';
@@ -111,8 +128,36 @@ void main() {
         '/settings/about',
         '/settings/privacy',
         '/settings/help',
+        '/settings/accounts',
+        '/settings/accounts/new',
+        '/settings/accounts/$testAccountId',
+        '/settings/accounts/$testAccountId/edit',
+        '/settings/accounts/$testAccountId/delete',
+        '/settings/accounts/combined/new',
+        '/settings/accounts/combined/combo',
+        '/settings/accounts/combined/combo/members',
+        // The same app inside the combined (read-only) account.
+        'open:combined',
+        '/home',
+        '/home/member/$testAccountId',
+        '/home/member/acc-family',
+        '/income',
+        '/income/$salary',
+        '/income/$salary/edit',
+        '/income/$salary/entry?type=received&period=2024-09',
+        '/calendar',
+        '/insights',
+        '/insights/month/2024-09',
+        '/settings',
+        '/settings/data',
+        '/settings/dashboard',
       ];
       for (final r in routes) {
+        if (r == 'open:combined') {
+          await container.read(accountControllerProvider).open(const CombinedView('combo'));
+          await settle();
+          continue;
+        }
         current = r;
         router.go(r);
         await settle();

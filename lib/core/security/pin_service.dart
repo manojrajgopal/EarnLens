@@ -37,21 +37,39 @@ class PinLockedOut extends PinCheck {
 /// * After [freeAttempts] failures each further failure locks input for an
 ///   exponentially growing delay (30 s, 60 s, ... capped at 1 h). The counter
 ///   survives app restarts because it lives in the secure store.
+///
+/// The app PIN uses the `pin.*` keys. An account PIN (optional extra lock on
+/// one account) is an independent verifier under its own [keyPrefix], with
+/// its own failure counter and lockout — see [forAccount].
 class PinService {
-  PinService(this.store, this.clock, {this.iterations = defaultIterations, this.useIsolate = true});
+  PinService(
+    this.store,
+    this.clock, {
+    this.iterations = defaultIterations,
+    this.useIsolate = true,
+    this.keyPrefix = 'pin',
+  });
 
   static const defaultIterations = 150000;
   static const freeAttempts = 5;
   static const minLength = 4;
   static const maxLength = 8;
 
-  static const _kVerifier = 'pin.verifier';
-  static const _kFailures = 'pin.failures';
-  static const _kLockedUntil = 'pin.lockedUntil';
+  String get _kVerifier => '$keyPrefix.verifier';
+  String get _kFailures => '$keyPrefix.failures';
+  String get _kLockedUntil => '$keyPrefix.lockedUntil';
 
   final SecureStore store;
   final Clock clock;
   final int iterations;
+
+  /// Secure-store key namespace of this verifier.
+  final String keyPrefix;
+
+  /// The independent PIN of one account, stored and rate-limited separately
+  /// from the app PIN.
+  PinService forAccount(String accountId) =>
+      PinService(store, clock, iterations: iterations, useIsolate: useIsolate, keyPrefix: 'account.$accountId.pin');
 
   /// Derive keys on a background isolate (keeps the UI responsive). Tests
   /// running in a fake-async zone set this to false.

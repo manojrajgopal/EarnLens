@@ -12,7 +12,11 @@ import '../core/platform/privacy_channel.dart';
 import '../core/routing/app_router.dart';
 import '../core/security/pin_service.dart';
 import '../core/security/secure_store.dart';
+import '../data/repositories/local_account_repository.dart';
 import '../data/repositories/local_profile_settings_repository.dart';
+import '../database/app_database.dart';
+import '../domain/models/account.dart';
+import '../features/accounts/application/account_controller.dart';
 import '../database/database_factory.dart';
 import '../domain/models/settings.dart';
 import '../features/authentication/application/session_controller.dart';
@@ -52,13 +56,24 @@ Future<ProviderContainer> initializeApp() async {
   final db = openAppDatabase();
   final hasPin = await PinService(const PlatformSecureStore(), const SystemClock()).hasPin();
 
-  final security = await LocalSettingsRepository(db, const SystemClock()).read('security');
+  final settings = LocalSettingsRepository(db, const SystemClock());
+  final security = await settings.read(SettingsKeys.security);
+  // Restore the last opened account before the first frame, so the app never
+  // shows another account's figures while starting.
+  final initialView = AccountView.fromJson(await settings.read(SettingsKeys.activeView));
+  await _ensureAccount(db);
   if (security != null && SecuritySettings.fromJson(security).privacyMode) {
     await PrivacyChannel.setSecure(true);
   }
 
   ProviderContainer? container;
-  final notifications = LocalNotificationProvider(onTap: (route) => container?.read(routerProvider).go(route));
+  void openRoute(String route) {
+    final c = container;
+    if (c == null) return;
+    c.read(accountControllerProvider).openRoute(route, c.read(routerProvider).go);
+  }
+
+  final notifications = LocalNotificationProvider(onTap: openRoute);
 
   container = ProviderContainer(overrides: [
     databaseProvider.overrideWithValue(db),
@@ -66,12 +81,31 @@ Future<ProviderContainer> initializeApp() async {
     appVersionProvider.overrideWithValue(version),
     hasPinAtLaunchProvider.overrideWithValue(hasPin),
     notificationProviderProvider.overrideWithValue(notifications),
+    initialViewProvider.overrideWithValue(initialView),
   ]);
 
   // Opened from a notification while the app was not running.
   notifications.launchRoute().then((route) {
-    if (route != null && route.startsWith('/')) container?.read(routerProvider).go(route);
+    if (route != null && route.startsWith('/')) openRoute(route);
   }).catchError((Object _) {});
 
   return container;
+}
+
+/// Every onboarded install has at least one account (the v2 migration and
+/// onboarding create it); this repairs a database restored from an unusual
+/// state, so records always have an account to be shown in.
+Future<void> _ensureAccount(AppDatabase db) async {
+  final profile = await db.select(db.profiles).getSingleOrNull();
+  if (profile == null || !profile.onboardingComplete) return;
+  if ((await db.select(db.accounts).get()).isNotEmpty) return;
+  final now = DateTime.now();
+  await LocalAccountRepository(db, const SystemClock(), const UuidGenerator()).createAccount(Account(
+    id: const UuidGenerator().newId(),
+    name: AccountType.personal.label,
+    type: AccountType.personal,
+    currencyCode: profile.currencyCode,
+    createdAt: now,
+    updatedAt: now,
+  ));
 }

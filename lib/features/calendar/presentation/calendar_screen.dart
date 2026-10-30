@@ -125,12 +125,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       title: 'Calendar',
       subtitle: 'Paydays, bonuses and your own reminders.',
       actions: [
-        RoundIconButton(
-          icon: Icons.add_rounded,
-          tooltip: 'Add event',
-          filled: true,
-          onPressed: () => showEventForm(context, date: _selected),
-        ),
+        // Combined accounts are read-only: events are added in an account.
+        if (!ref.watch(isReadOnlyViewProvider))
+          RoundIconButton(
+            icon: Icons.add_rounded,
+            tooltip: 'Add event',
+            filled: true,
+            onPressed: () => showEventForm(context, date: _selected),
+          ),
       ],
     );
 
@@ -457,7 +459,7 @@ class _DayPanel extends ConsumerWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       SectionHeader(
         title,
-        action: 'Add event',
+        action: ref.watch(isReadOnlyViewProvider) ? null : 'Add event',
         onAction: () => showEventForm(context, date: date),
         padding: const EdgeInsets.fromLTRB(4, AppSpace.xl, 0, AppSpace.sm),
       ),

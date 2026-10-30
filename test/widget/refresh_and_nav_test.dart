@@ -152,7 +152,8 @@ void main() {
         updatedAt: clock.now(),
       ));
       final s = source(id: 'sal', start: d(2024, 1, 1));
-      await LocalIncomeSourceRepository(db, clock, SeqIds()).createSource(s, initialRate: rev('sal', s.startDate, 3100000));
+      await seedAccount(db);
+      await LocalIncomeSourceRepository(db, clock, SeqIds(), testScope).createSource(s, initialRate: rev('sal', s.startDate, 3100000));
       return db;
     }
 

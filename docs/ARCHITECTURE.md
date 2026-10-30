@@ -5,8 +5,8 @@ repository interfaces, and UI features depend on both only through Riverpod prov
 
 ```
                 ┌──────────────────────── features/* (presentation) ───────────────────────┐
-                │ dashboard · income_sources · salary · bonuses · transactions · calendar   │
-                │ analytics · history · forecasts · settings · backup_restore · onboarding  │
+                │ accounts · dashboard · income_sources · salary · bonuses · transactions   │
+                │ calendar · analytics · history · forecasts · settings · backup_restore    │
                 └───────────────▲──────────────────────────────▲───────────────────────────┘
                                 │ Riverpod providers            │
                 ┌───────────────┴────────────┐   ┌──────────────┴──────────────┐
@@ -40,18 +40,39 @@ repository interfaces, and UI features depend on both only through Riverpod prov
 Business calculations never live in widgets, database classes or notification callbacks — screens
 call `EarningsCalculator`, `RateCalculator`, `ForecastCalculator`, `PaymentScheduler` via providers.
 
+## Accounts
+
+Everything that shows financial data derives from the **active view** (`activeViewProvider`):
+
+```
+selectedViewProvider ─┐
+accountsStreamProvider ├─► activeViewProvider ─► accountScopeProvider ─► income/records repositories
+combinedAccounts… ─────┘                               │                 scopedSnapshotProvider(scope)
+                                                       └─► currency, locale, per-view settings keys
+```
+
+- `AccountScope` decides what a repository can read and which single account it can write. A
+  combined scope is read-only.
+- `scopedSnapshotProvider` is an auto-disposed family keyed by scope. Each account has its own
+  snapshot instance, which is preloaded by `AccountController.open` before the switch.
+- Flows that write to an account that is not on screen (onboarding, sample data) use the
+  account-bound providers `accountIncomeRepositoryProvider(id)` and similar ones.
+- `AccountGate` (in the shell) covers PIN-protected views. `ReadOnlyGuard` wraps write routes.
+
+Details: MULTI_ACCOUNTS.md.
+
 ## Data flow
 
 1. Repositories write rows inside Drift transactions and append an `audit_log` row in the same
    transaction.
-2. `LocalEarningsDataSource.watchSnapshot()` listens to table updates and emits an immutable
-   `EarningsSnapshot` (coalescing bursts).
+2. `LocalEarningsDataSource(db, accountIds).watchSnapshot()` listens to table updates and emits an
+   immutable `EarningsSnapshot` of those accounts (coalescing bursts).
 3. Providers derive summaries, rates, payments and forecasts from the snapshot. Nothing is cached in
    the database, so totals can't drift from the records.
 4. The live counter watches a 1 Hz ticker and recomputes `liveTotal(range, now)`; other cards
    recompute only when data or the date changes (a minute ticker rolls `todayProvider` at midnight).
-5. `NotificationService` and `HomeWidgetService` listen to the same providers and reschedule /
-   republish (debounced).
+5. `NotificationService` plans reminders for every active account. Each account is planned with its
+   own records and settings. `HomeWidgetService` publishes the active view. Both are debounced.
 
 ## Dependency injection
 
@@ -88,3 +109,4 @@ same paths.
 | Key-value JSON settings | Preferences evolve without schema migrations; parsers tolerate missing keys. |
 | No code generation for Riverpod | Fewer build steps; providers are plain declarations. |
 | Drift with schema snapshots | Typed queries, transactions, and verifiable migrations (`drift_schemas/`). |
+| `account_id` on every record, combined accounts as queries | Isolation is enforced by SQL, repositories and triggers. Combined figures can never drift from, duplicate or change member records. |

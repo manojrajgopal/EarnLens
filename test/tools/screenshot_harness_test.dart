@@ -78,7 +78,8 @@ void main() {
         createdAt: clock.now(),
         updatedAt: clock.now(),
       ));
-      await SampleDataService(LocalIncomeSourceRepository(db, clock, ids), LocalRecordsRepository(db, clock, ids), clock, ids)
+      await seedAccount(db);
+      await SampleDataService(LocalIncomeSourceRepository(db, clock, ids, testScope), LocalRecordsRepository(db, clock, ids, testScope), clock, ids)
           .insert(currencyCode: 'INR', today: d(2026, 10, 29));
 
       await tester.pumpWidget(testApp(db: db, store: InMemorySecureStore(), clock: clock));
@@ -139,7 +140,8 @@ void main() {
       createdAt: clock.now(),
       updatedAt: clock.now(),
     ));
-    await SampleDataService(LocalIncomeSourceRepository(db, clock, ids), LocalRecordsRepository(db, clock, ids), clock, ids)
+    await seedAccount(db);
+    await SampleDataService(LocalIncomeSourceRepository(db, clock, ids, testScope), LocalRecordsRepository(db, clock, ids, testScope), clock, ids)
         .insert(currencyCode: 'INR', today: d(2026, 10, 29));
     await tester.pumpWidget(testApp(db: db, store: InMemorySecureStore(), clock: clock));
     for (var i = 0; i < 20; i++) {

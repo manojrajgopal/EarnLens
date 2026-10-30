@@ -362,6 +362,9 @@ class CsvSectionTiles extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => SettingsGroup(
         title: 'Spreadsheets (CSV)',
+        footer: ref.watch(isReadOnlyViewProvider)
+            ? 'Exports cover every member of this combined account. Import into an individual account.'
+            : 'Exports and imports cover the open account only.',
         children: [
           SettingsTile(
             icon: Icons.file_download_outlined,
@@ -370,13 +373,14 @@ class CsvSectionTiles extends ConsumerWidget {
             subtitle: 'Transactions or monthly summaries',
             onTap: () => showCsvExportSheet(context),
           ),
-          SettingsTile(
-            icon: Icons.file_upload_outlined,
-            tone: SettingsTone.peach,
-            title: 'Import transactions from CSV',
-            subtitle: 'Every line is checked before anything is added',
-            onTap: () => runCsvImport(context, ref),
-          ),
+          if (!ref.watch(isReadOnlyViewProvider))
+            SettingsTile(
+              icon: Icons.file_upload_outlined,
+              tone: SettingsTone.peach,
+              title: 'Import transactions from CSV',
+              subtitle: 'Every line is checked before anything is added',
+              onTap: () => runCsvImport(context, ref),
+            ),
           const SettingsBlock(child: CsvFormatHelp()),
         ],
       );

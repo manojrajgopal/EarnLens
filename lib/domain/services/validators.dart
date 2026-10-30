@@ -1,4 +1,5 @@
 import '../../core/errors/app_exception.dart';
+import '../models/account.dart';
 import '../models/enums.dart';
 import '../models/income_source.dart';
 import '../models/records.dart';
@@ -75,6 +76,57 @@ class Validators {
   static void monthly(MonthlyRecord r) {
     for (final v in [r.originalEstimateMinor, r.revisedEstimateMinor, r.actualMinor]) {
       if (v != null) amount(v, field: 'amount');
+    }
+  }
+
+  /// Largest stored profile photo (base64 of a 192px PNG is far smaller).
+  static const maxAvatarImageLength = 400000;
+
+  static void account(Account a) {
+    final name = a.name.trim();
+    if (name.isEmpty) throw const ValidationException('Account name is required', field: 'name');
+    if (name.length > 40) throw const ValidationException('Keep the name to 40 characters', field: 'name');
+    if (!RegExp(r'^[A-Z]{3}$').hasMatch(a.currencyCode)) {
+      throw const ValidationException('Choose a currency', field: 'currency');
+    }
+    if ((a.description ?? '').length > 200) {
+      throw const ValidationException('Keep the description to 200 characters', field: 'description');
+    }
+    if ((a.avatarImage ?? '').length > maxAvatarImageLength) {
+      throw const ValidationException('That photo is too large', field: 'avatar');
+    }
+    if (a.monthlyTargetMinor != null) amount(a.monthlyTargetMinor!, field: 'target');
+  }
+
+  /// Name, currency and member rules for a combined account. [individualIds]
+  /// are the ids of existing individual accounts.
+  static void combined(CombinedAccount c, Set<String> individualIds) {
+    final name = c.name.trim();
+    if (name.isEmpty) throw const ValidationException('Name the combined account', field: 'name');
+    if (name.length > 60) throw const ValidationException('Keep the name to 60 characters', field: 'name');
+    if (!RegExp(r'^[A-Z]{3}$').hasMatch(c.currencyCode)) {
+      throw const ValidationException('Choose a currency', field: 'currency');
+    }
+    if ((c.avatarImage ?? '').length > maxAvatarImageLength) {
+      throw const ValidationException('That photo is too large', field: 'avatar');
+    }
+    members(c.id, c.memberIds, individualIds);
+  }
+
+  static void members(String combinedId, List<String> memberIds, Set<String> individualIds) {
+    if (memberIds.contains(combinedId)) {
+      throw const ValidationException('A combined account cannot include itself', field: 'members');
+    }
+    if (memberIds.toSet().length != memberIds.length) {
+      throw const ValidationException('Each account can only be added once', field: 'members');
+    }
+    for (final id in memberIds) {
+      if (!individualIds.contains(id)) {
+        throw const ValidationException('Only individual accounts can be combined', field: 'members');
+      }
+    }
+    if (memberIds.length < 2) {
+      throw const ValidationException('Choose at least two accounts to combine', field: 'members');
     }
   }
 

@@ -8,6 +8,9 @@ import '../../../core/theme/tokens.dart';
 import '../../../domain/models/profile.dart';
 import '../../../domain/models/settings.dart';
 import '../../../shared/widgets/components.dart';
+import '../../../domain/models/account.dart';
+import '../../accounts/presentation/account_avatar.dart';
+import '../../accounts/presentation/account_switcher_sheet.dart';
 import '../../authentication/application/session_controller.dart';
 import 'settings_widgets.dart';
 
@@ -23,6 +26,13 @@ class SettingsScreen extends ConsumerWidget {
     final pin = ref.watch(pinConfiguredProvider);
     final backup = ref.watch(backupStateProvider);
     final calc = ref.watch(calculationSettingsProvider);
+    final account = ref.watch(activeAccountProvider);
+    final combined = ref.watch(activeCombinedProvider);
+    final accountCount = ref.watch(accountsProvider).length;
+    // Calculation defaults, holidays and reminders belong to one account;
+    // a combined account shows where to change them instead.
+    final perAccount = account != null;
+    final viewName = account?.name ?? combined?.name ?? '';
     final c = context.colors;
     void go(String path) => context.go('/settings/$path');
 
@@ -32,6 +42,35 @@ class SettingsScreen extends ConsumerWidget {
       root: true,
       children: [
         EntranceScale(child: _ProfileCard(profile: profile, onTap: () => go('profile'))),
+        SettingsGroup(title: 'Accounts', children: [
+          SettingsTile(
+            icon: Icons.switch_account_outlined,
+            title: viewName.isEmpty ? 'Switch account' : 'Open: $viewName',
+            subtitle: combined != null ? 'Combined · read-only' : 'Tap to switch or combine accounts',
+            trailing: account != null
+                ? AccountAvatar.of(account, size: 34)
+                : combined != null
+                    ? AccountAvatar.combined(combined, size: 34)
+                    : null,
+            onTap: () => showAccountSwitcher(context),
+          ),
+          SettingsTile(
+            icon: Icons.manage_accounts_outlined,
+            tone: SettingsTone.sky,
+            title: 'Manage accounts',
+            subtitle: 'Create, edit, protect, combine or delete',
+            value: '$accountCount/${Account.maxAccounts}',
+            onTap: () => go('accounts'),
+          ),
+          if (account != null)
+            SettingsTile(
+              icon: Icons.badge_outlined,
+              tone: SettingsTone.mint,
+              title: 'This account',
+              subtitle: 'Name, avatar, currency, target and PIN',
+              onTap: () => go('accounts/${account.id}'),
+            ),
+        ]),
         SettingsGroup(title: 'Personalise', children: [
           SettingsTile(
             icon: Icons.person_outline_rounded,
@@ -55,34 +94,38 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.dashboard_customize_outlined,
             tone: SettingsTone.sky,
             title: 'Dashboard',
-            subtitle: 'Cards, earning units and live counter',
+            subtitle: 'Cards, earning units and live counter of $viewName',
             onTap: () => go('dashboard'),
           ),
         ]),
-        SettingsGroup(title: 'Earnings', children: [
-          SettingsTile(
-            icon: Icons.calculate_outlined,
-            tone: SettingsTone.mint,
-            title: 'Earnings calculation',
-            subtitle: 'Default: ${calc.defaultPolicy.label.toLowerCase()}',
-            onTap: () => go('calculation'),
-          ),
-          SettingsTile(
-            icon: Icons.beach_access_outlined,
-            tone: SettingsTone.peach,
-            title: 'Holidays & leave',
-            subtitle: 'Days that change how pay accrues',
-            onTap: () => go('holidays'),
-          ),
-        ]),
+        SettingsGroup(
+          title: 'Earnings',
+          footer: perAccount ? null : 'These are set per account. Open a member account to change them.',
+          children: [
+            SettingsTile(
+              icon: Icons.calculate_outlined,
+              tone: SettingsTone.mint,
+              title: 'Earnings calculation',
+              subtitle: perAccount ? 'Default: ${calc.defaultPolicy.label.toLowerCase()}' : 'Set in each account',
+              onTap: perAccount ? () => go('calculation') : null,
+            ),
+            SettingsTile(
+              icon: Icons.beach_access_outlined,
+              tone: SettingsTone.peach,
+              title: 'Holidays & leave',
+              subtitle: perAccount ? 'Days that change how pay accrues' : 'Set in each account',
+              onTap: perAccount ? () => go('holidays') : null,
+            ),
+          ],
+        ),
         SettingsGroup(title: 'Alerts & security', children: [
           SettingsTile(
             icon: Icons.notifications_none_rounded,
             tone: SettingsTone.peach,
             title: 'Notifications',
-            subtitle: 'Paydays, overdue payments and summaries',
-            value: notifications.masterEnabled ? 'On' : 'Off',
-            onTap: () => go('notifications'),
+            subtitle: perAccount ? 'Reminders for $viewName' : 'Set in each account',
+            value: perAccount ? (notifications.masterEnabled ? 'On' : 'Off') : null,
+            onTap: perAccount ? () => go('notifications') : null,
           ),
           SettingsTile(
             icon: Icons.lock_outline_rounded,

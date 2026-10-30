@@ -28,7 +28,11 @@ class SessionController extends Notifier<SessionState> {
 
   void unlock() => state = state.copyWith(locked: false, clearBackgrounded: true);
 
-  void lock() => state = state.copyWith(locked: true, revealAmounts: false);
+  /// Locks the app. PIN-protected accounts need their own PIN again too.
+  void lock() {
+    state = state.copyWith(locked: true, revealAmounts: false);
+    ref.read(accountUnlocksProvider.notifier).clear();
+  }
 
   void toggleReveal() => state = state.copyWith(revealAmounts: !state.revealAmounts);
 

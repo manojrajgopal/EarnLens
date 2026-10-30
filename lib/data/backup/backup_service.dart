@@ -41,6 +41,8 @@ class BackupPreview {
 
   int get sourceCount => counts['income_sources'] ?? 0;
   int get ledgerCount => counts['ledger_entries'] ?? 0;
+  int get accountCount => counts['accounts'] ?? 0;
+  int get combinedCount => counts['combined_accounts'] ?? 0;
 }
 
 class RestoreResult {
@@ -55,7 +57,7 @@ class RestoreResult {
 ///
 /// File layout (JSON):
 /// ```
-/// { "format": "earnlens-backup", "formatVersion": 1, "schemaVersion": 1,
+/// { "format": "earnlens-backup", "formatVersion": 1, "schemaVersion": 2,
 ///   "appVersion": "...", "createdAt": "...", "counts": {...},
 ///   "sha256": "<hex of payload JSON>",
 ///   "payload": {...}                      // unencrypted backups
@@ -63,7 +65,13 @@ class RestoreResult {
 ///               "iterations": n, "salt": b64, "nonce": b64,
 ///               "ciphertext": b64, "mac": b64 } }   // encrypted backups
 /// ```
-/// The PIN and other secure-store secrets are never included.
+/// The PIN and other secure-store secrets are never included. Accounts,
+/// combined accounts and their memberships are included; account PINs are
+/// not, so restored accounts start without one.
+///
+/// Schema 1 backups (before accounts existed) are upgraded on import: all of
+/// their records go into one "Personal" account whose id is derived from the
+/// backup, so restoring the same file twice never creates two accounts.
 class BackupService {
   BackupService(this.db, this.clock, {this.kdfIterations = 210000, this.appVersion = '0.1.0'});
 
@@ -79,6 +87,9 @@ class BackupService {
   late final List<_TableCodec> _codecs = [
     _TableCodec(db.profiles, ProfileRow.fromJson),
     _TableCodec(db.settings, SettingRow.fromJson),
+    _TableCodec(db.accounts, AccountRow.fromJson),
+    _TableCodec(db.combinedAccounts, CombinedAccountRow.fromJson),
+    _TableCodec(db.combinedAccountMembers, CombinedMemberRow.fromJson),
     _TableCodec(db.incomeSources, IncomeSourceRow.fromJson),
     _TableCodec(db.rateRevisions, RateRevisionRow.fromJson),
     _TableCodec(db.sourcePauses, SourcePauseRow.fromJson),
@@ -159,6 +170,7 @@ class BackupService {
 
     final payload = (jsonDecode(payloadJson) as Map).cast<String, dynamic>();
     final rawTables = (payload['tables'] as Map?)?.cast<String, dynamic>() ?? {};
+    if (schema < 2) _addV1Account(rawTables, 'restored-${digest.substring(0, 20)}');
     final tables = <String, List<Map<String, dynamic>>>{};
     for (final c in _codecs) {
       final list = (rawTables[c.table.actualTableName] as List?) ?? const [];
@@ -194,16 +206,42 @@ class BackupService {
           for (final c in _codecs.reversed) {
             await db.delete(c.table).go();
           }
+        } else {
+          final existing = {for (final a in await db.select(db.accounts).get()) a.id};
+          final incoming = {for (final a in preview.tables['accounts'] ?? const <Map<String, dynamic>>[]) a['id']};
+          if ({...existing, ...incoming}.length > maxAccounts) {
+            throw const BackupException(
+                'Merging would go over the limit of 10 accounts. Delete an account first, or replace instead.');
+          }
         }
+        final existingKeys = mode == RestoreMode.merge
+            ? {for (final c in await db.select(db.combinedAccounts).get()) c.memberKey}
+            : const <String>{};
         for (final c in _codecs) {
-          final rows = preview.tables[c.table.actualTableName] ?? const [];
-          if (mode == RestoreMode.merge && (c.table == db.profiles || c.table == db.settings)) {
-            // Keep this device's profile and preferences when merging.
-            final hasExisting = (await db.select(c.table).get()).isNotEmpty;
-            if (hasExisting) {
+          var rows = preview.tables[c.table.actualTableName] ?? const <Map<String, dynamic>>[];
+          if (mode == RestoreMode.merge && c.table == db.profiles) {
+            // Keep this device's profile when merging.
+            if ((await db.select(c.table).get()).isNotEmpty) {
               skipped += rows.length;
               continue;
             }
+          }
+          if (mode == RestoreMode.merge && c.table == db.settings) {
+            // Keep this device's preferences; add only the settings of
+            // accounts that arrive with the backup (`section@accountId`).
+            rows = [for (final r in rows) if ('${r['key']}'.contains('@')) r];
+          }
+          if (c.table == db.accounts) {
+            // Account PINs live in this device's secure storage, not in backups.
+            rows = [for (final r in rows) {...r, 'requiresPin': false}];
+          }
+          if (c.table == db.combinedAccounts) {
+            // The same member set already combined here: keep the existing one.
+            rows = [for (final r in rows) if (!existingKeys.contains(r['memberKey'])) r];
+          }
+          if (c.table == db.combinedAccountMembers) {
+            final present = {for (final h in await db.select(db.combinedAccounts).get()) h.id};
+            rows = [for (final r in rows) if (present.contains(r['combinedAccountId'])) r];
           }
           // insertOrIgnore skips rows whose id (or ledger duplicate key) already
           // exists; the row-count difference tells us how many were new.
@@ -213,20 +251,75 @@ class BackupService {
           }
           final added = await _count(c.table) - before;
           inserted += added;
-          skipped += rows.length - added;
+          final total = preview.tables[c.table.actualTableName]?.length ?? 0;
+          skipped += total - added;
         }
         return RestoreResult(inserted: inserted, skipped: skipped);
       });
+
+  static const maxAccounts = 10;
 
   Future<int> _count(TableInfo table) async {
     final q = db.selectOnly(table)..addColumns([countAll()]);
     return await q.map((r) => r.read(countAll())).getSingle() ?? 0;
   }
 
-  /// Hook for upgrading rows from older schema versions. Version 1 is current.
-  Map<String, dynamic> _migrateRow(String table, Map<String, dynamic> row, int fromSchema) => row;
+  static const _ownedTables = {
+    'income_sources',
+    'rate_revisions',
+    'source_pauses',
+    'day_overrides',
+    'compensation_items',
+    'monthly_records',
+    'ledger_entries',
+    'calendar_events',
+    'audit_log',
+  };
+
+  /// Adds the account a schema 1 backup's records will belong to, and moves
+  /// its dashboard, reminder and calculation settings onto that account.
+  void _addV1Account(Map<String, dynamic> raw, String accountId) {
+    final profiles = (raw['profiles'] as List?) ?? const [];
+    final currency = profiles.isEmpty ? 'INR' : ((profiles.first as Map)['currencyCode'] as String? ?? 'INR');
+    final now = clock.now().microsecondsSinceEpoch;
+    raw['accounts'] = [
+      {
+        'id': accountId,
+        'name': 'Personal',
+        'type': 'personal',
+        'avatarEmoji': null,
+        'colorIndex': 0,
+        'avatarImage': null,
+        'description': null,
+        'currencyCode': currency,
+        'locale': null,
+        'monthlyTargetMinor': null,
+        'requiresPin': false,
+        'isArchived': false,
+        'sortOrder': 0,
+        'createdAt': now,
+        'updatedAt': now,
+      },
+    ];
+    _v1AccountId = accountId;
+  }
+
+  String? _v1AccountId;
+
+  /// Upgrades a row from an older schema version.
+  Map<String, dynamic> _migrateRow(String table, Map<String, dynamic> row, int fromSchema) {
+    if (fromSchema >= 2) return row;
+    final accountId = _v1AccountId!;
+    if (_ownedTables.contains(table)) return {...row, 'accountId': accountId};
+    if (table == 'settings' && AppDatabase.perAccountSettingKeys.contains(row['key'])) {
+      return {...row, 'key': '${row['key']}@$accountId'};
+    }
+    return row;
+  }
 
   void _checkReferences(Map<String, List<Map<String, dynamic>>> t) {
+    final accountIds = {for (final a in t['accounts'] ?? const []) a['id']};
+    final combinedIds = {for (final c in t['combined_accounts'] ?? const []) c['id']};
     final sourceIds = {for (final s in t['income_sources'] ?? const []) s['id']};
     final itemIds = {for (final s in t['compensation_items'] ?? const []) s['id']};
     void check(String table, String field, Set<Object?> ids, {bool nullable = false}) {
@@ -235,6 +328,24 @@ class BackupService {
         if (v == null && nullable) continue;
         if (!ids.contains(v)) {
           throw BackupException('Backup is inconsistent: a $table record points to a missing record.');
+        }
+      }
+    }
+
+    if (accountIds.length > maxAccounts) throw const BackupException('This backup has more than 10 accounts.');
+    for (final table in _ownedTables) {
+      check(table, 'accountId', accountIds, nullable: table == 'audit_log');
+    }
+    check('combined_account_members', 'combinedAccountId', combinedIds);
+    check('combined_account_members', 'accountId', accountIds);
+
+    // A record must belong to the same account as its income source.
+    final owner = {for (final s in t['income_sources'] ?? const <Map<String, dynamic>>[]) s['id']: s['accountId']};
+    for (final table in _ownedTables.difference({'income_sources', 'audit_log'})) {
+      for (final r in t[table] ?? const <Map<String, dynamic>>[]) {
+        final source = r['sourceId'];
+        if (source != null && owner[source] != r['accountId']) {
+          throw BackupException('Backup is inconsistent: a $table record belongs to another account.');
         }
       }
     }

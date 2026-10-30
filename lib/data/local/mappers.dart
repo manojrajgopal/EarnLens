@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../core/date_time/local_date.dart';
 import '../../database/app_database.dart';
+import '../../domain/models/account.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/income_source.dart';
 import '../../domain/models/profile.dart';
@@ -38,6 +39,7 @@ ProfilesCompanion profileToRow(UserProfile p) => ProfilesCompanion.insert(
 extension IncomeSourceRowX on IncomeSourceRow {
   IncomeSource toDomain() => IncomeSource(
         id: id,
+        accountId: accountId,
         name: name,
         kind: enumByName(IncomeKind.values, kind, IncomeKind.salary),
         category: enumByName(IncomeCategory.values, category, IncomeCategory.other),
@@ -72,8 +74,10 @@ extension IncomeSourceRowX on IncomeSourceRow {
       );
 }
 
-IncomeSourceRow sourceToRow(IncomeSource s) => IncomeSourceRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+IncomeSourceRow sourceToRow(IncomeSource s, {required String accountId}) => IncomeSourceRow(
       id: s.id,
+      accountId: accountId,
       name: s.name,
       kind: s.kind.name,
       category: s.category.name,
@@ -107,6 +111,7 @@ IncomeSourceRow sourceToRow(IncomeSource s) => IncomeSourceRow(
 extension RateRevisionRowX on RateRevisionRow {
   RateRevision toDomain() => RateRevision(
         id: id,
+        accountId: accountId,
         sourceId: sourceId,
         effectiveFrom: LocalDate.parse(effectiveFrom),
         amountMinor: amountMinor,
@@ -118,8 +123,10 @@ extension RateRevisionRowX on RateRevisionRow {
       );
 }
 
-RateRevisionRow revisionToRow(RateRevision r) => RateRevisionRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+RateRevisionRow revisionToRow(RateRevision r, {required String accountId}) => RateRevisionRow(
       id: r.id,
+      accountId: accountId,
       sourceId: r.sourceId,
       effectiveFrom: r.effectiveFrom.toIso(),
       amountMinor: r.amountMinor,
@@ -133,14 +140,17 @@ RateRevisionRow revisionToRow(RateRevision r) => RateRevisionRow(
 extension SourcePauseRowX on SourcePauseRow {
   SourcePause toDomain() => SourcePause(
         id: id,
+        accountId: accountId,
         sourceId: sourceId,
         start: LocalDate.parse(start),
         endExclusive: LocalDate.tryParse(endExclusive),
       );
 }
 
-SourcePauseRow pauseToRow(SourcePause p) => SourcePauseRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+SourcePauseRow pauseToRow(SourcePause p, {required String accountId}) => SourcePauseRow(
       id: p.id,
+      accountId: accountId,
       sourceId: p.sourceId,
       start: p.start.toIso(),
       endExclusive: p.endExclusive?.toIso(),
@@ -149,6 +159,7 @@ SourcePauseRow pauseToRow(SourcePause p) => SourcePauseRow(
 extension DayOverrideRowX on DayOverrideRow {
   DayOverride toDomain() => DayOverride(
         id: id,
+        accountId: accountId,
         sourceId: sourceId,
         date: LocalDate.parse(date),
         type: enumByName(DayOverrideType.values, type, DayOverrideType.holiday),
@@ -156,8 +167,10 @@ extension DayOverrideRowX on DayOverrideRow {
       );
 }
 
-DayOverrideRow overrideToRow(DayOverride o) => DayOverrideRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+DayOverrideRow overrideToRow(DayOverride o, {required String accountId}) => DayOverrideRow(
       id: o.id,
+      accountId: accountId,
       sourceId: o.sourceId,
       date: o.date.toIso(),
       type: o.type.name,
@@ -167,6 +180,7 @@ DayOverrideRow overrideToRow(DayOverride o) => DayOverrideRow(
 extension CompensationItemRowX on CompensationItemRow {
   CompensationItem toDomain() => CompensationItem(
         id: id,
+        accountId: accountId,
         sourceId: sourceId,
         type: enumByName(CompensationType.values, type, CompensationType.other),
         title: title,
@@ -187,8 +201,10 @@ extension CompensationItemRowX on CompensationItemRow {
       );
 }
 
-CompensationItemRow itemToRow(CompensationItem i) => CompensationItemRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+CompensationItemRow itemToRow(CompensationItem i, {required String accountId}) => CompensationItemRow(
       id: i.id,
+      accountId: accountId,
       sourceId: i.sourceId,
       type: i.type.name,
       title: i.title,
@@ -211,6 +227,7 @@ CompensationItemRow itemToRow(CompensationItem i) => CompensationItemRow(
 extension MonthlyRecordRowX on MonthlyRecordRow {
   MonthlyRecord toDomain() => MonthlyRecord(
         id: id,
+        accountId: accountId,
         sourceId: sourceId,
         month: YearMonth.parse(month),
         originalEstimateMinor: originalEstimateMinor,
@@ -223,8 +240,10 @@ extension MonthlyRecordRowX on MonthlyRecordRow {
       );
 }
 
-MonthlyRecordRow recordToRow(MonthlyRecord r) => MonthlyRecordRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+MonthlyRecordRow recordToRow(MonthlyRecord r, {required String accountId}) => MonthlyRecordRow(
       id: r.id,
+      accountId: accountId,
       sourceId: r.sourceId,
       month: r.month.toIso(),
       originalEstimateMinor: r.originalEstimateMinor,
@@ -239,6 +258,7 @@ MonthlyRecordRow recordToRow(MonthlyRecord r) => MonthlyRecordRow(
 extension LedgerEntryRowX on LedgerEntryRow {
   LedgerEntry toDomain() => LedgerEntry(
         id: id,
+        accountId: accountId,
         sourceId: sourceId,
         itemId: itemId,
         type: enumByName(LedgerType.values, type, LedgerType.received),
@@ -254,8 +274,10 @@ extension LedgerEntryRowX on LedgerEntryRow {
       );
 }
 
-LedgerEntryRow ledgerToRow(LedgerEntry e) => LedgerEntryRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+LedgerEntryRow ledgerToRow(LedgerEntry e, {required String accountId}) => LedgerEntryRow(
       id: e.id,
+      accountId: accountId,
       sourceId: e.sourceId,
       itemId: e.itemId,
       type: e.type.name,
@@ -273,6 +295,7 @@ LedgerEntryRow ledgerToRow(LedgerEntry e) => LedgerEntryRow(
 extension CalendarEventRowX on CalendarEventRow {
   CalendarEvent toDomain() => CalendarEvent(
         id: id,
+        accountId: accountId,
         title: title,
         date: LocalDate.parse(date),
         type: enumByName(CalendarEventType.values, type, CalendarEventType.note),
@@ -285,8 +308,10 @@ extension CalendarEventRowX on CalendarEventRow {
       );
 }
 
-CalendarEventRow eventToRow(CalendarEvent e) => CalendarEventRow(
+/// [accountId] is the owning account decided by the repository, never the caller.
+CalendarEventRow eventToRow(CalendarEvent e, {required String accountId}) => CalendarEventRow(
       id: e.id,
+      accountId: accountId,
       title: e.title,
       date: e.date.toIso(),
       type: e.type.name,
@@ -301,6 +326,7 @@ CalendarEventRow eventToRow(CalendarEvent e) => CalendarEventRow(
 extension AuditRowX on AuditRow {
   AuditEntry toDomain() => AuditEntry(
         id: id,
+        accountId: accountId,
         entityType: entityType,
         entityId: entityId,
         action: action,
@@ -310,3 +336,71 @@ extension AuditRowX on AuditRow {
         at: fromTs(at),
       );
 }
+
+extension AccountRowX on AccountRow {
+  Account toDomain() => Account(
+        id: id,
+        name: name,
+        type: enumByName(AccountType.values, type, AccountType.custom),
+        avatarEmoji: avatarEmoji,
+        colorIndex: colorIndex,
+        avatarImage: avatarImage,
+        description: description,
+        currencyCode: currencyCode,
+        locale: locale,
+        monthlyTargetMinor: monthlyTargetMinor,
+        requiresPin: requiresPin,
+        isArchived: isArchived,
+        sortOrder: sortOrder,
+        createdAt: fromTs(createdAt),
+        updatedAt: fromTs(updatedAt),
+      );
+}
+
+AccountRow accountToRow(Account a) => AccountRow(
+      id: a.id,
+      name: a.name,
+      type: a.type.name,
+      avatarEmoji: a.avatarEmoji,
+      colorIndex: a.colorIndex,
+      avatarImage: a.avatarImage,
+      description: a.description,
+      currencyCode: a.currencyCode,
+      locale: a.locale,
+      monthlyTargetMinor: a.monthlyTargetMinor,
+      requiresPin: a.requiresPin,
+      isArchived: a.isArchived,
+      sortOrder: a.sortOrder,
+      createdAt: ts(a.createdAt),
+      updatedAt: ts(a.updatedAt),
+    );
+
+extension CombinedAccountRowX on CombinedAccountRow {
+  CombinedAccount toDomain(List<String> memberIds) => CombinedAccount(
+        id: id,
+        name: name,
+        avatarEmoji: avatarEmoji,
+        colorIndex: colorIndex,
+        avatarImage: avatarImage,
+        description: description,
+        currencyCode: currencyCode,
+        memberIds: [...memberIds]..sort(),
+        sortOrder: sortOrder,
+        createdAt: fromTs(createdAt),
+        updatedAt: fromTs(updatedAt),
+      );
+}
+
+CombinedAccountRow combinedToRow(CombinedAccount c) => CombinedAccountRow(
+      id: c.id,
+      name: c.name,
+      avatarEmoji: c.avatarEmoji,
+      colorIndex: c.colorIndex,
+      avatarImage: c.avatarImage,
+      description: c.description,
+      currencyCode: c.currencyCode,
+      memberKey: c.memberKey,
+      sortOrder: c.sortOrder,
+      createdAt: ts(c.createdAt),
+      updatedAt: ts(c.updatedAt),
+    );

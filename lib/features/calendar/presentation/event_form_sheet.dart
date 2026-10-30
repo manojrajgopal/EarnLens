@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../bootstrap/dependency_injection.dart';
 import '../../../core/date_time/local_date.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../domain/models/enums.dart';
@@ -13,14 +14,20 @@ import '../../../shared/widgets/components.dart';
 import '../../../shared/widgets/form_fields.dart';
 import '../../../shared/widgets/organic.dart';
 
-/// Opens the add/edit form for a user calendar event.
-Future<void> showEventForm(BuildContext context, {CalendarEvent? event, required LocalDate date}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useRootNavigator: true,
-      builder: (_) => _EventForm(event: event, date: date),
-    );
+/// Opens the add/edit form for a user calendar event. In a combined
+/// (read-only) view it explains where events are changed instead.
+Future<void> showEventForm(BuildContext context, {CalendarEvent? event, required LocalDate date}) async {
+  if (ProviderScope.containerOf(context, listen: false).read(isReadOnlyViewProvider)) {
+    showMessage(context, const ReadOnlyViewException().message);
+    return;
+  }
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useRootNavigator: true,
+    builder: (_) => _EventForm(event: event, date: date),
+  );
+}
 
 class _EventForm extends ConsumerStatefulWidget {
   const _EventForm({required this.event, required this.date});
